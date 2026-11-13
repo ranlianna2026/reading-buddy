@@ -68,6 +68,7 @@ export async function keepReading(
     asked: number;
     correct: number;
     seconds: number;
+    picture: string;
     place: string;
     seed: number;
     detail: unknown;
@@ -75,12 +76,12 @@ export async function keepReading(
 ) {
   const now = Date.now();
   await env.DB.prepare(
-    "INSERT INTO readings (id, kid_id, title, words, wcpm, accuracy, comprehension, score, asked, correct, seconds, place, seed, created_at) " +
-      "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"
+    "INSERT INTO readings (id, kid_id, title, words, wcpm, accuracy, comprehension, score, asked, correct, seconds, picture, place, seed, created_at) " +
+      "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)"
   )
     .bind(
       reading.id, kidId, reading.title, reading.words, reading.wcpm, reading.accuracy, reading.comprehension,
-      reading.score, reading.asked, reading.correct, reading.seconds, reading.place, reading.seed, now
+      reading.score, reading.asked, reading.correct, reading.seconds, reading.picture, reading.place, reading.seed, now
     )
     .run();
   await env.MEMORY.put(page(kidId, reading.id), JSON.stringify({ ...reading, at: now }, null, 2), {
@@ -90,13 +91,13 @@ export async function keepReading(
 
 export async function history(kidId: string, limit = 20) {
   const rows = await env.DB.prepare(
-    "SELECT id, title, words, wcpm, accuracy, comprehension, score, asked, correct, seconds, place, seed, created_at " +
+    "SELECT id, title, words, wcpm, accuracy, comprehension, score, asked, correct, seconds, picture, place, seed, created_at " +
       "FROM readings WHERE kid_id = ?1 ORDER BY created_at DESC LIMIT ?2"
   )
     .bind(kidId, limit)
     .all<{
       id: string; title: string; words: number; wcpm: number; accuracy: number; comprehension: number;
-      score: number; asked: number; correct: number; seconds: number; place: string; seed: number; created_at: number;
+      score: number; asked: number; correct: number; seconds: number; picture: string; place: string; seed: number; created_at: number;
     }>();
   return rows.results;
 }

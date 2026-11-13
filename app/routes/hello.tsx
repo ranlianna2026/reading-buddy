@@ -9,24 +9,16 @@ import { fields, post, send } from "~/lib/api";
 import { GRADES, SPAN } from "~/lib/grades";
 import { userOf } from "~/lib/auth.server";
 import { kidsOf } from "~/lib/kid.server";
-import { PLACES, seedOf } from "~/lib/scenery";
 import type { Route } from "./+types/hello";
 
 export const meta = () => [{ title: "Hello · Reading Buddy" }];
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await userOf(request);
-  const today = seedOf(new Date().toDateString());
-  return {
-    signedIn: Boolean(user),
-    kids: user ? (await kidsOf(user.id)).length : 0,
-    seed: today,
-    place: PLACES[today % PLACES.length],
-  };
+  return { signedIn: Boolean(user), kids: user ? (await kidsOf(user.id)).length : 0 };
 }
 
 export default function Hello({ loaderData }: Route.ComponentProps) {
-  const { seed, place } = loaderData;
   const [params] = useSearchParams();
   const go = useNavigate();
   const [step, setStep] = useState<"in" | "who">(loaderData.signedIn || params.has("who") ? "who" : "in");
@@ -79,7 +71,7 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
   if (step === "who") {
     return (
       <Screen id="page-who">
-        <Hero seed={seed} place={place} />
+        <Hero />
         <Focus intro={step}>
           <Buddy mood="hi" size={170} className="breathe" />
           <h1 className="text-4xl">Who is reading today?</h1>
@@ -138,7 +130,7 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
 
   return (
     <Screen id="page-hello">
-      <Hero seed={seed} place={place} />
+      <Hero />
       <Focus intro={mode}>
         <Buddy mood="hi" size={180} className="breathe" />
         <h1 className="text-4xl">Reading Buddy</h1>

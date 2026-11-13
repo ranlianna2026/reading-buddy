@@ -3,6 +3,7 @@ import { userOf } from "~/lib/auth.server";
 import { kidOf } from "~/lib/kid.server";
 import { tongueOf } from "~/lib/languages";
 import { asPrompt, recall } from "~/lib/memory.server";
+import { seedOf } from "~/lib/seed";
 import type { Route } from "./+types/api.story";
 
 const BANDS: Record<string, string> = {
@@ -62,13 +63,4 @@ export async function action({ request }: Route.ActionArgs) {
       level: Number(level),
     };
   });
-}
-
-function seedOf(words: string) {
-  let seed = 2166136261;
-  for (let i = 0; i < words.length; i++) {
-    seed ^= words.charCodeAt(i);
-    seed = Math.imul(seed, 16777619);
-  }
-  return seed >>> 0;
 }

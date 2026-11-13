@@ -3,7 +3,7 @@ import { redirect } from "react-router";
 import { Buddy } from "~/components/buddy";
 import { BottomNav, Crumbs, Screen, TopNav } from "~/components/chrome";
 import { Cover } from "~/components/cover";
-import { PLACES, seedOf, type Place } from "~/components/scene";
+import { seedOf } from "~/lib/seed";
 import { userOf } from "~/lib/auth.server";
 import { heartsNow } from "~/lib/kid";
 import { kidOf } from "~/lib/kid.server";
@@ -32,25 +32,17 @@ export default function Library({ loaderData }: Route.ComponentProps) {
   return (
     <Screen id="page-library">
       <TopNav left={<span className="text-lg font-medium">Stories</span>} right={<Crumbs kid={kid} />} />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-5 pb-6">
+      <main className="mx-auto w-full max-w-[1100px] flex-1 px-5 pb-6">
         <div className="mb-6 flex items-center gap-4">
           <Buddy mood="hi" size={100} className="breathe" />
           <p className="bubble">Pick a book and I will write it just for you, {kid.name}.</p>
         </div>
         {read.length > 0 && (
           <section className="mb-7">
-            <h2 className="mb-3 text-xl">Stories you have read</h2>
-            <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {read.map((row, i) => (
                 <li key={row.id} className="h-full">
-                  <Cover
-                    title={row.title}
-                    by={kid.name}
-                    seed={row.seed}
-                    place={row.place as Place}
-                    n={read.length - i}
-                    note={`${row.wcpm} wpm`}
-                  />
+                  <Cover title={row.title} by={kid.name} picture={row.picture} seed={row.seed} n={read.length - i} note={`${row.wcpm} wpm`} />
                 </li>
               ))}
             </ul>
@@ -58,8 +50,7 @@ export default function Library({ loaderData }: Route.ComponentProps) {
         )}
         {SHELVES.map((shelf) => (
           <section key={shelf.name} className="mb-7">
-            <h2 className="mb-3 text-xl">{shelf.name}</h2>
-            <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {shelf.ideas.map((idea) => {
                 const seed = seedOf(idea);
                 return (
@@ -67,7 +58,6 @@ export default function Library({ loaderData }: Route.ComponentProps) {
                     <Cover
                       title={idea[0].toUpperCase() + idea.slice(1)}
                       seed={seed}
-                      place={PLACES[seed % PLACES.length]}
                       label={shelf.name}
                       note="unread"
                       to={`/read?topic=${encodeURIComponent(idea)}`}
