@@ -47,6 +47,7 @@ export async function action({ request }: Route.ActionArgs) {
       comprehension: reading.comprehension,
       finished: body.finished !== false,
       asked: reading.asked,
+      aloud: body.aloud !== false,
     });
     const stars = reading.accuracy >= 95 ? 3 : reading.accuracy >= 85 ? 2 : 1;
     return { reading: reading.id, ...(await cheer(kid, stars)), stars_won: stars, level };

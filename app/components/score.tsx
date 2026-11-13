@@ -4,8 +4,9 @@ import { reading as compile } from "~/lib/report";
 type Row = { wcpm: number; accuracy: number; comprehension: number };
 
 // One number out of three measures. The dial shows the whole; the three bars show where it came from.
-export function ReadingScore({ rows, grade, name }: { rows: Row[]; grade: string; name: string }) {
+export function ReadingScore({ rows: all, grade, name }: { rows: Row[]; grade: string; name: string }) {
   const level = gradeOf(grade);
+  const rows = all.filter((row) => row.accuracy > 0);
   if (!rows.length)
     return (
       <section className="card p-5">

@@ -15,6 +15,8 @@
     "ELEVENLABS_API_KEY": "sk_0533ce5bd0cadf22c5a53c7c51c52c6c9df2849652c09467",
     "VOICE_ID": "zmcVlqmyk3Jpn5AVYcAL",
     "VOICE_MODEL": "eleven_turbo_v2_5",
+    "IMAGE_MODEL": "muse-image-1.0",
+    "AI_IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell",
     "PRODUCT_NAME": "Reading Buddy"
   },
   "d1_databases": [

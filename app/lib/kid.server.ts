@@ -49,10 +49,10 @@ export async function cheer(kid: Kid, stars: number) {
 }
 
 // Standard instructional bands: 95% accuracy and two thirds understood moves up, under 90% moves down.
-export async function settle(kid: Kid, read: { accuracy: number; comprehension: number; finished: boolean; asked: number }) {
+export async function settle(kid: Kid, read: { accuracy: number; comprehension: number; finished: boolean; asked: number; aloud: boolean }) {
   const was = levelFor(kid);
   const next =
-    !read.asked && !read.accuracy
+    !read.aloud
       ? was
       : read.accuracy >= 95 && read.comprehension >= 67 && read.finished
         ? Math.min(5, was + 1)
@@ -64,7 +64,9 @@ export async function settle(kid: Kid, read: { accuracy: number; comprehension: 
     from: was,
     to: next,
     why:
-      next > was
+      !read.aloud
+        ? "listening practice, so your reading level stays the same"
+        : next > was
         ? "accurate reading and good understanding"
         : next < was
           ? "this one was hard, so the next story will be a little easier"

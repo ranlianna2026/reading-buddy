@@ -49,6 +49,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
   const [right, setRight] = useState(0);
   const [report, setReport] = useState<Report | null>(null);
   const [figAt, setFigAt] = useState<number | undefined>(undefined);
+  const [drawn, setDrawn] = useState("");
   const mic = useRef<{ stop: () => void } | null>(null);
   const started = useRef(0);
   const asked = useRef(false);
@@ -70,6 +71,10 @@ export default function Read({ loaderData }: Route.ComponentProps) {
       setReport(null);
       setFigAt(undefined);
       asked.current = false;
+      setDrawn("");
+      post<{ url: string }>("/api/picture", { title: made.title, page: made.passage, kind: "new" })
+        .then((drew) => setDrawn(drew.url))
+        .catch(() => setDrawn(""));
       post<{ questions: Question[] }>("/api/talk", {
         step: "questions",
         passage: made.passage,
@@ -140,6 +145,16 @@ export default function Read({ loaderData }: Route.ComponentProps) {
     setStage("talking");
   };
 
+  const quizOnly = () => {
+    mic.current?.stop();
+    hush();
+    setListening(false);
+    setFigAt(undefined);
+    if (!story) return;
+    setResult(grade(story.passage, "", 0));
+    setStage("talking");
+  };
+
   const quizDone = (answers: Answer[]) => {
     const won = answers.filter((one) => one.verdict === "correct").length;
     setRight(won);
@@ -153,6 +168,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
     setBusy("finish");
     try {
       const comprehension = asked_n ? Math.round((won / asked_n) * 100) : 0;
+      const aloud = result.wordsAttempted > 0;
       const praise = await post<{ said: string; notes: unknown[] }>("/api/talk", {
         language: kid.language,
         step: "praise",
@@ -174,12 +190,13 @@ export default function Read({ loaderData }: Route.ComponentProps) {
         asked: asked_n,
         correct: won,
         seconds: Math.round(result.seconds),
-        score: compile({ wcpm: result.wcpm, accuracy: result.accuracy, comprehension }, kid.grade).score,
+        score: aloud ? compile({ wcpm: result.wcpm, accuracy: result.accuracy, comprehension }, kid.grade).score : 0,
         practiceWords: result.practiceWords,
         notes: praise.notes,
         place: story.place,
         seed: story.seed,
         finished: result.finished,
+        aloud,
         detail: { heard, miscues: result.miscues },
       });
       setReport({ said: praise.said, stars: kept.stars_won, streak: kept.streak, right: won, asked: asked_n, level: kept.level });
@@ -254,17 +271,31 @@ export default function Read({ loaderData }: Route.ComponentProps) {
           </div>
           <aside className="order-first w-full shrink-0 md:order-last md:sticky md:top-24 md:w-60">
             <div className="plate">
-              <Scene seed={story.seed} place={story.place} w={150} h={190} className="rounded-lg" alt={`${story.title}, drawn`} />
+              {drawn ? (
+                <img src={drawn} alt={`${story.title}, painted`} className="block w-full rounded-lg" />
+              ) : (
+                <Scene seed={story.seed} place={story.place} w={150} h={190} className="rounded-lg" alt={`${story.title}, drawn`} />
+              )}
             </div>
-            <p className="mono mt-2 text-center text-muted">{story.place}</p>
+            {drawn && (
+              <div className="plate mt-2">
+                <Scene seed={story.seed} place={story.place} w={150} h={96} className="rounded-lg" alt={`${story.title}, drawn`} />
+              </div>
+            )}
+            <p className="mono mt-2 text-center text-muted">{drawn ? "painted for this story" : story.place}</p>
           </aside>
         </main>
         <ActionBar>
           <Mic on={listening} onClick={listening ? stopReading : startReading} label={listening ? "I'm done" : "Read to Fig"} />
           {!listening && (
-            <button className="btn btn-quiet" onClick={figAt === undefined ? figReads : () => { hush(); setFigAt(undefined); }}>
-              {figAt === undefined ? "Fig reads first" : "Stop Fig"}
-            </button>
+            <>
+              <button className="btn btn-quiet" onClick={figAt === undefined ? figReads : () => { hush(); setFigAt(undefined); }}>
+                {figAt === undefined ? "Fig reads first" : "Stop Fig"}
+              </button>
+              <button className="btn btn-sun" onClick={quizOnly}>
+                I finished the book
+              </button>
+            </>
           )}
         </ActionBar>
       </Screen>

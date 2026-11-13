@@ -25,6 +25,7 @@ export function After({
   home: () => void;
 }) {
   const comprehension = report && report.asked ? Math.round((report.right / report.asked) * 100) : 0;
+  const aloud = score.wordsAttempted > 0;
   const whole = compile({ wcpm: score.wcpm, accuracy: score.accuracy, comprehension }, grade);
   const spoken = useRef(false);
   useEffect(() => {
@@ -49,6 +50,7 @@ export function After({
         </>
       )}
 
+      {aloud && (
       <div className="card flex w-full items-center gap-4 p-5">
         <div
           className="grid h-20 w-20 shrink-0 place-items-center rounded-full"
@@ -66,6 +68,7 @@ export function After({
           <p className="mono text-muted">speed · fluency · understanding, together</p>
         </div>
       </div>
+      )}
 
       {report?.level && (
         <p className="bubble w-full text-left">
@@ -76,8 +79,8 @@ export function After({
       )}
 
       <dl className="grid w-full grid-cols-3 gap-3">
-        <Tile label="Words a minute" value={score.wcpm} />
-        <Tile label="Read right" value={`${score.accuracy}%`} />
+        <Tile label="Words a minute" value={aloud ? score.wcpm : "—"} />
+        <Tile label={aloud ? "Read right" : "You listened"} value={aloud ? `${score.accuracy}%` : "👂"} />
         <Tile label="Questions" value={report ? `${report.right}/${report.asked}` : "—"} />
       </dl>
 

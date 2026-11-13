@@ -94,8 +94,8 @@ export async function listen(audio: Blob): Promise<string> {
   if (viaCeleris !== null) return viaCeleris;
   if (!env.AI) throw new Refusal("Nothing could listen to that just now.", 502);
   const bytes = new Uint8Array(await audio.arrayBuffer());
-  const run = env.AI.run as (model: string, input: unknown) => Promise<{ text?: string }>;
-  const result = await run("@cf/openai/whisper-large-v3-turbo", { audio: [...bytes] });
+  const ai = env.AI as unknown as { run: (model: string, input: unknown) => Promise<{ text?: string }> };
+  const result = await ai.run("@cf/openai/whisper-large-v3-turbo", { audio: [...bytes] });
   return (result.text ?? "").trim();
 }
 

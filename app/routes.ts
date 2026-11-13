@@ -15,4 +15,5 @@ export default [
   route("api/voices", "routes/api.voices.ts"),
   route("api/listen", "routes/api.listen.ts"),
   route("api/finish", "routes/api.finish.ts"),
+  route("api/picture/*", "routes/api.picture.ts"),
 ] satisfies RouteConfig;
