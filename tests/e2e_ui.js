@@ -154,10 +154,11 @@
     ok("H4 streak + minutes + mastered tiles", /day streak/.test($("#pcard").innerText) && /minutes read/.test($("#pcard").innerText));
     const leo = tabs.findIndex(t => t.includes("Sample Leo")); await openParent(leo);
     ok("H5 second language level shown", $("#pcard .levels").innerText.includes("Español"));
-    const pend = document.querySelectorAll("#pcard [data-id]").length / 2;
-    ok("H6 review queue has the feedback items", pend >= 1, `${pend} items`);
-    if (pend) { document.querySelector('#pcard [data-l="correct"]').click(); await sleep(800); }
-    ok("H7 confirming removes it from the queue", document.querySelectorAll("#pcard [data-id]").length / 2 === pend - 1);
+    // this run's feedback came from a test learner, so it must NOT reach the parent's queue
+    const testItems = [...document.querySelectorAll("#pcard .ritem .meta")].filter(m => /E2E-/i.test(m.innerText)).length;
+    ok("H6 test feedback kept out of the parent's review queue", testItems === 0, `${testItems} test items shown`);
+    const fq = await fetch("/api/review").then(r => r.json());
+    ok("H7 review API hides test learners too", !fq.some(e => /^e2e-/i.test(e.learner)), `${fq.length} real items pending`);
     $("#pclose").click();
 
     // ---------- I. Chinese session with auto-finish ----------
