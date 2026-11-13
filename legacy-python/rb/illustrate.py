@@ -4,7 +4,9 @@
   generated picture): /images/edits draws the page's moment in the reference's style and characters.
 - Without one (a story told only by voice): /images/generations draws the first picture from scratch; the
   page then becomes the reference for the rest of the book, so characters stay consistent.
-$0.01 per image. Cached on disk by (reference, text, kind).
+- If drawing from the reference fails (an unreachable book image, a rejected upload), the page is drawn from
+  scratch instead, so every page still gets a picture.
+Pictures are resized to ~1024px wide JPEG before sending. $0.01 per image. Cached on disk by (reference, text, kind).
 """
 import base64, hashlib, io, os
 from functools import lru_cache
@@ -27,6 +29,24 @@ STYLES = {
 }
 
 
+SHRINK_WIDTH = int(os.environ.get("RB_IMAGE_WIDTH", "1024"))
+
+
+def shrink(data, width=SHRINK_WIDTH, quality=82):
+    """Smaller JPEG for the page: much less to send to the browser. (The API's `size` only sets the aspect
+    ratio, so it can't be asked for a smaller picture.)"""
+    try:
+        from PIL import Image
+        im = Image.open(io.BytesIO(data)).convert("RGB")
+        if im.width > width:
+            im = im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
+        out = io.BytesIO()
+        im.save(out, "JPEG", quality=quality, optimize=True, progressive=True)
+        return out.getvalue() if out.tell() < len(data) else data
+    except Exception:
+        return data                                 # never lose a picture over resizing
+
+
 @lru_cache(maxsize=64)
 def small_ref(ref_image):
     """Send a 512px JPEG copy of the reference (~75 KB instead of ~1.2 MB): edits run ~40% faster
@@ -45,7 +65,16 @@ def small_ref(ref_image):
 
 
 def illustrate(page_text, ref_image=None, title="", kind="book", cast="", variant="", avoid=""):
-    """Returns a data URL (jpeg)."""
+    """Returns a data URL (jpeg). Falls back to a from-scratch drawing when the reference can't be used."""
+    if ref_image:
+        try:
+            return _draw(page_text, ref_image, title, kind, cast, variant, avoid)
+        except Exception:
+            pass                                    # bad or unreachable reference: draw it fresh below
+    return _draw(page_text, None, title, "new", cast, variant, avoid)
+
+
+def _draw(page_text, ref_image=None, title="", kind="book", cast="", variant="", avoid=""):
     key = hashlib.sha1(f"{(ref_image or '')[:4000]}|{page_text}|{kind}|{cast}|{variant}".encode()).hexdigest()[:20]
     path = CACHE / f"{key}.jpg"
     if path.exists():
@@ -66,7 +95,7 @@ def illustrate(page_text, ref_image=None, title="", kind="book", cast="", varian
                    json=body, timeout=httpx.Timeout(55, connect=10))
     if r.status_code >= 400:
         raise meta_api.APIError(f"{r.status_code}: {r.text[:300]}")
-    data = base64.b64decode(r.json()["data"][0]["b64_json"])
+    data = shrink(base64.b64decode(r.json()["data"][0]["b64_json"]))
     CACHE.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
     return "data:image/jpeg;base64," + base64.b64encode(data).decode()

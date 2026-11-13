@@ -27,7 +27,7 @@ def timed(fn, *a, **k):
 
 # 1. index
 r = C.get("/")
-check("index page serves", r.status_code == 200 and "Reading Buddy" in r.text)
+check("index page serves", r.status_code == 200 and "Learning Buddy" in r.text)
 
 # 2. books: built-in, Gutenberg via Keenable (with typography fix), collection fable, unknown title
 r, s = timed(C.post, "/api/book", json={"title": "The Fox and the Grapes"})

@@ -23,7 +23,7 @@ _client = None
 def kclient():
     global _client
     if _client is None:
-        _client = Keenable(client_source="Reading Buddy")  # uses KEENABLE_API_KEY if set, else keyless
+        _client = Keenable(client_source="Learning Buddy")  # uses KEENABLE_API_KEY if set, else keyless
     return _client
 
 
@@ -38,6 +38,9 @@ BUILTIN = {
     "狐狸和葡萄": {"title": "狐狸和葡萄", "author": "伊索", "source": "https://www.gutenberg.org/ebooks/21", "lang": "zh",
         "text": "一只狐狸肚子很饿。它看见架子上挂着一串串熟透的葡萄。它跳了又跳，可是怎么也够不着。最后它走开了，"
                 "还说：“这些葡萄是酸的，我才不想吃呢！”"},
+    "الثعلب والعنب": {"title": "الثعلب والعنب", "author": "إيسوب", "source": "https://www.gutenberg.org/ebooks/21", "lang": "ar",
+        "text": "كان ثعلب جائعا جدا. رأى عنقودا من العنب الناضج معلقا على شجرة عالية. قفز وقفز، لكنه لم يستطع أن "
+                "يصل إليه. في النهاية مشى بعيدا وقال: «هذا العنب حامض، لا أريده!»"},
     "the fox and the grapes": {
         "title": "The Fox and the Grapes", "author": "Aesop (tr. George Fyler Townsend)",
         "source": "https://www.gutenberg.org/ebooks/21",
@@ -73,7 +76,7 @@ def ksearch(query, **params):
     """Keenable search over REST (the 0.1.5 SDK lacks safety_mode). Kid app: always safety_mode=strict."""
     key = os.environ.get("KEENABLE_API_KEY")
     url = "https://api.keenable.ai/v1/search" + ("" if key else "/public")
-    headers = {"X-Keenable-Title": "Reading Buddy", **({"X-API-Key": key} if key else {})}
+    headers = {"X-Keenable-Title": "Learning Buddy", **({"X-API-Key": key} if key else {})}
     r = httpx.post(url, json={"query": query, "safety_mode": "strict", **params}, headers=headers, timeout=20)
     r.raise_for_status()
     return [SimpleNamespace(title=x.get("title", ""), url=x["url"], snippet=x.get("snippet", ""))
@@ -243,7 +246,7 @@ def clean_typography(raw):
     return (text, round(ratio, 3)) if ratio >= 0.95 else (raw, round(ratio, 3))
 
 
-LANG_HINT = {"en": "", "es": "español", "fr": "français", "zh": "中文"}
+LANG_HINT = {"en": "", "es": "español", "fr": "français", "zh": "中文", "ar": "العربية"}
 
 
 def get_passage(title, part=0, lang="en"):

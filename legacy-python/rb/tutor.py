@@ -7,7 +7,7 @@ from .books import ksearch
 from .meta_api import chat_json, data_url
 from .scoring import norm
 
-SYSTEM = ("You are Reading Buddy, a warm, patient reading tutor for children aged {age}. Use short, simple "
+SYSTEM = ("You are Learning Buddy, a warm, patient reading tutor for children aged {age}. Use short, simple "
           "sentences. Be encouraging and specific. Never shame. Ground everything in the passage. "
           "Write everything you say in {language}; quotes must be copied exactly from the passage.")
 
@@ -149,7 +149,7 @@ L_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["fact"
     "source_index": {"type": "integer"}}}
 
 
-KIDS = {"en": "facts for kids", "es": "datos para niños", "fr": "pour les enfants", "zh": "儿童 知识"}
+KIDS = {"en": "facts for kids", "es": "datos para niños", "fr": "pour les enfants", "zh": "儿童 知识", "ar": "معلومات للأطفال"}
 
 
 def learn_more(topic, title, age="6-10", lang="en"):

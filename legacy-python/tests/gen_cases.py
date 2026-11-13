@@ -18,7 +18,7 @@ from rb import lang as L  # noqa: E402
 from rb.books import BUILTIN  # noqa: E402
 from rb.scoring import _close, norm, score  # noqa: E402
 
-LANGS = ["en", "es", "fr", "zh"]
+LANGS = ["en", "es", "fr", "zh", "ar"]
 EXTRA = {   # more passages per language for mutation tests (our own text)
     "en": ["Mia found a small blue egg under the old oak tree. She carried it home in her hat and kept it warm all night.",
            "The robot liked to dance when nobody was looking. One day the whole class saw him spin, and everyone clapped."],
@@ -28,12 +28,15 @@ EXTRA = {   # more passages per language for mutation tests (our own text)
            "Le robot aimait danser quand personne ne regardait. Un jour, toute la classe le vit tourner et tout le monde applaudit."],
     "zh": ["小美在老橡树下发现了一个蓝色的小蛋。她把蛋放在帽子里带回家，整晚都让它暖暖的。",
            "小机器人喜欢在没人看的时候跳舞。有一天，全班同学都看见它转圈，大家都拍手了。"],
+    "ar": ["وجدت مريم بيضة زرقاء صغيرة تحت شجرة البلوط القديمة. حملتها إلى البيت في قبعتها وأبقتها دافئة طوال الليل.",
+           "كان الروبوت يحب الرقص عندما لا ينظر إليه أحد. وفي يوم من الأيام رآه كل الصف وهو يدور، فصفق الجميع."],
 }
 DISTRACT = {
     "en": ["banana", "purple", "rocket", "pillow", "thunder", "giraffe", "pencil", "window"],
     "es": ["plátano", "morado", "cohete", "almohada", "trueno", "jirafa", "lápiz", "ventana"],
     "fr": ["banane", "violet", "fusée", "oreiller", "tonnerre", "girafe", "crayon", "fenêtre"],
     "zh": ["香", "蕉", "紫", "火", "箭", "枕", "雷", "笔"],
+    "ar": ["موزة", "بنفسجي", "صاروخ", "وسادة", "رعد", "زرافة", "قلم", "نافذة"],
 }
 results = []
 
@@ -100,7 +103,8 @@ def model_tests():
     from rb.meta_api import chat_json
     c = httpx.Client(base_url=os.environ.get("BASE", "http://127.0.0.1:8010"), timeout=240)
     ideas = {"en": "a little cloud who is afraid of thunder", "es": "una nube pequeña que tiene miedo de los truenos",
-             "fr": "un petit nuage qui a peur du tonnerre", "zh": "一朵害怕打雷的小云朵"}
+             "fr": "un petit nuage qui a peur du tonnerre", "zh": "一朵害怕打雷的小云朵",
+             "ar": "غيمة صغيرة تخاف من الرعد"}
     for lang in LANGS:
         t = time.time()
         st = c.post("/api/story", data={"idea": ideas[lang], "learner_name": f"gen-{lang}", "lang": lang}).json()

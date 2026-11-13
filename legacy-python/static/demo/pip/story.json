@@ -1,0 +1,65 @@
+{
+ "title": "Pip and the Fireflies",
+ "text": "Pip is a little dragon. He lives in a cozy cave. At night it gets dark. Pip does not like the dark. He steps out to the soft grass. The sky is full of stars. Then he sees small lights. Blink, blink! Giggle, giggle! It is kind fireflies. Hello, Pip! they sing. Fireflies are little beetles. Their glow is yellow and green. Pip smiles at his new pals. Please stay with me? he asks. We will! say the fireflies. Now Pip is not sad. He naps in soft glow.",
+ "pages": [
+  {
+   "image_index": 0,
+   "text": "Pip is a little dragon. He lives in a cozy cave. At night it gets dark. Pip does not like the dark."
+  },
+  {
+   "image_index": 1,
+   "text": "He steps out to the soft grass. The sky is full of stars. Then he sees small lights. Blink, blink! Giggle, giggle!"
+  },
+  {
+   "image_index": 2,
+   "text": "It is kind fireflies. Hello, Pip! they sing. Fireflies are little beetles. Their glow is yellow and green."
+  },
+  {
+   "image_index": 3,
+   "text": "Pip smiles at his new pals. Please stay with me? he asks. We will! say the fireflies. Now Pip is not sad. He naps in soft glow."
+  }
+ ],
+ "via": "story",
+ "part": 0,
+ "parts": 1,
+ "source": "story",
+ "level": 2,
+ "check": {
+  "word_count": 89,
+  "unit": "words",
+  "target_words": [
+   80,
+   120
+  ],
+  "word_count_ok": true,
+  "longest_sentence": 7,
+  "sentence_ok": true,
+  "language_ok": true,
+  "practice_used": [],
+  "practice_missing": []
+ },
+ "attempts": 1,
+ "plan": {
+  "characters": "Pip, a little cuddly dragon who is afraid of the dark, and a bunch of kind, giggly fireflies who love to glow",
+  "real_world_topic": true,
+  "search_query": "how do fireflies glow fun facts for kids",
+  "setting": "A cozy little cave and a soft grassy meadow at nighttime, under a starry sky",
+  "what_happens": "a little dragon who is afraid of the dark makes friends with the fireflies who keep him company with their gentle glow"
+ },
+ "lang": "en",
+ "facts": [
+  {
+   "title": "Firefly facts and photos | National Geographic Kids",
+   "url": "https://kids.nationalgeographic.com/animals/invertebrates/facts/firefly"
+  }
+ ],
+ "seconds": 22.5,
+ "level_label": "Level 2 · early reader",
+ "page_images": [
+  "/static/demo/pip/p0.jpg",
+  "/static/demo/pip/p1.jpg",
+  "/static/demo/pip/p2.jpg",
+  "/static/demo/pip/p3.jpg"
+ ],
+ "demo": "pip"
+}

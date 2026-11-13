@@ -1,6 +1,6 @@
-# 📚 Reading Buddy
+# 📚 Learning Buddy
 
-A reading buddy for kids. Pick a story, read it out loud to **Fig**, then talk about it.
+A reading tutor for kids. Pick a book or a story, read it out loud, then talk about it.
 
 React Router 8 on a Cloudflare Worker, with D1 for accounts and progress, two R2 buckets (one for the
 project, one for the child's memory), cookie sessions, passkeys, Celeris for the words and ElevenLabs
@@ -8,17 +8,19 @@ for the voice. No domain to buy: the Worker's own `*.workers.dev` host is the pa
 
 ## Two apps in here
 
-This repository holds both halves of Reading Buddy, merged so nothing is lost.
+This repository holds both halves of Learning Buddy, merged so nothing is lost.
 
 | Where | What |
 | --- | --- |
 | `app/`, `workers/`, `migrations/`, `wrangler.json` | The React Router 8 app on a Cloudflare Worker. This is the one that runs with `npm run dev`. |
-| `legacy-python/` | The original FastAPI app, at its newest: Muse Spark and Muse Image, the pop-up quiz and report card, the learner profile, the parent dashboard and feedback queue, its own `README.md` and `tests/`. |
+| `legacy-python/` | The FastAPI app, at its newest: Keenable book search, Muse Spark and Muse Image, the pop-up quiz and report card, the learner profile, the parent dashboard and feedback queue, story movies (`rb/video.py`), the demo story, its own `README.md` and `tests/`. |
 
 The Worker app has taken the read-aloud scorer, the quiz, the learner's adaptive level and the Muse
-Image illustration step across from `legacy-python/` and rebuilt them in TypeScript; the parent
-dashboard, the feedback and review queue, Keenable "learn more" facts and storybook page-turning are
-still only in `legacy-python/`.
+Image illustration step across from `legacy-python/` and rebuilt them in TypeScript. Still only in
+`legacy-python/`: Keenable's Project Gutenberg search and "learn more" facts, the parent dashboard,
+the feedback and review queue, storybook page-turning, page photos, and story movies.
+
+`legacy-python/README.md` is the FastAPI app's own full description of its loop.
 
 ## Run it
 
