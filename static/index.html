@@ -82,6 +82,7 @@
   .page .pic.drawing::after { content:"✨ drawing a new picture…"; position:absolute; right:10px; bottom:8px; background:rgba(91,91,214,.9);
                       color:#fff; font-size:12.5px; font-weight:700; padding:4px 10px; border-radius:12px; animation: pulse 1.2s infinite alternate; }
   @keyframes pulse { to { opacity:.55; } }
+  .page .pic .ph { font-size:64px; animation: pulse 1s infinite alternate; }
   .page .passage { padding:16px 26px; font-size:clamp(21px, 3.1vh, 30px); line-height:1.6; flex:1; display:flex; align-items:center; }
   .page .passage > div { width:100%; }
   .turn { background:#fff; color:var(--accent); border:2px solid var(--accent-soft); font-size:26px; padding:0 14px; border-radius:18px; }
@@ -337,7 +338,10 @@ function showPage(n){
   document.querySelectorAll("#passage .pg").forEach(d => d.hidden = +d.dataset.p !== n);
   document.querySelectorAll("#dots span").forEach(d => d.classList.toggle("on", +d.dataset.p === n));
   const pg = S.pages[n], img = pg.gen || pg.img;
-  $("#pagepic").innerHTML = img ? `<img src="${img}" alt="">` + (pg.gen ? `<span class="badge">✨ new picture · ${S.book.via === "story" ? "in your drawing style" : "in the original style"}</span>` : "") : "";
+  const drawnFromIdea = S.book.via === "story" && !S.storyImgs.length;
+  const label = drawnFromIdea ? "✨ drawn by Buddy from your idea" : S.book.via === "story" ? "✨ new picture · in your drawing style" : "✨ new picture · in the original style";
+  $("#pagepic").innerHTML = img ? `<img src="${img}" alt="">` + (pg.gen ? `<span class="badge">${label}</span>` : "")
+                         : pg.pending ? `<div class="ph">🎨</div>` : "";
   $("#pagepic").classList.toggle("drawing", !!pg.pending);
   $("#prev").disabled = n === 0; $("#next").disabled = n === S.pages.length - 1;
   const page = $(".page"); page.style.animation = "none"; page.offsetHeight; page.style.animation = "";
@@ -346,7 +350,17 @@ function showPage(n){
 async function planPictures(){
   const b = S.book, token = S.bookToken = Math.random(); let prev = null, ref = null;
   const todo = [];
-  S.pages.forEach((p, i) => {
+  const cast = b.plan ? `${b.plan.characters}. Setting: ${b.plan.setting}` : "";
+  if (b.via === "story" && !S.storyImgs.length) {
+    // told only by voice/text: draw page 1 from scratch, then use it as the reference for every other page
+    S.pages.forEach(p => p.pending = true); showPage(S.page);
+    try {
+      const first = await post("/api/illustrate", { page_text: S.pages[0].text, title: b.title, kind: "new", cast });
+      if (S.bookToken !== token) return;
+      S.pages[0].gen = first.image; S.pages[0].pending = false; showPage(S.page);
+      S.pages.forEach((p, i) => { if (i > 0) { p.ref = first.image; todo.push(p); } });
+    } catch (e) { S.pages.forEach(p => p.pending = false); showPage(S.page); return; }
+  } else S.pages.forEach((p, i) => {
     ref = p.img || ref;
     const story = b.via === "story";
     if (ref && (story ? i > 0 : (!p.img || p.img === prev))) { p.pending = true; p.ref = ref; todo.push(p); }
@@ -355,7 +369,8 @@ async function planPictures(){
   for (let k = 0; k < todo.length; k += 2) {                       // two at a time
     await Promise.all(todo.slice(k, k + 2).map(async p => {
       try {
-        const r = await post("/api/illustrate", { page_text: p.text, ref_image: p.ref, title: b.title, kind: b.via === "story" ? "story" : "book" });
+        const kind = b.via !== "story" ? "book" : S.storyImgs.length ? "story" : "series";
+        const r = await post("/api/illustrate", { page_text: p.text, ref_image: p.ref, title: b.title, kind, cast });
         if (S.bookToken === token) p.gen = r.image;
       } catch (e) { /* keep the original picture */ }
       p.pending = false;

@@ -131,15 +131,16 @@ def session(req: SessionReq):
 
 class IllustrateReq(BaseModel):
     page_text: str
-    ref_image: str          # the book's own illustration URL, or the child's drawing as a data URL
+    ref_image: str = ""     # book illustration URL, child's drawing, or this story's first picture; "" = draw from scratch
     title: str = ""
-    kind: str = "book"      # "book" or "story"
+    kind: str = "book"      # "book", "story" (child's drawing), "series" (earlier page of this story), "new"
+    cast: str = ""          # characters and setting, for consistent pictures
 
 
 @app.post("/api/illustrate")
 def make_picture(req: IllustrateReq):
     from rb import illustrate
     try:
-        return {"image": illustrate.illustrate(req.page_text, req.ref_image, req.title, req.kind)}
+        return {"image": illustrate.illustrate(req.page_text, req.ref_image or None, req.title, req.kind, req.cast)}
     except Exception as e:  # a missing picture should never break reading
         raise HTTPException(502, f"could not draw a picture: {str(e)[:200]}")
