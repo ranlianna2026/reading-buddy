@@ -70,7 +70,7 @@ export function Cover({
             )}
           </div>
           <div className="mono mt-auto flex items-center justify-between px-4 pt-3.5 pb-3.5 text-muted">
-            <span>{by ? `by ${by}` : "unwritten"}</span>
+            <span>{by ? `by ${by}` : ""}</span>
             <span>{note ?? ""}</span>
           </div>
         </div>

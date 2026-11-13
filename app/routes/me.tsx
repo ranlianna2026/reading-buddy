@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { redirect } from "react-router";
+import { useEffect, useState } from "react";
+import { redirect, useRevalidator } from "react-router";
 
 import { Buddy } from "~/components/buddy";
 import { BottomNav, Crumbs, Flame, Heart, Screen, Star, TopNav } from "~/components/chrome";
@@ -8,9 +8,11 @@ import { gradeOf } from "~/lib/grades";
 import { heartsNow, MAX_HEARTS, nextHeartIn } from "~/lib/kid";
 import { kidOf } from "~/lib/kid.server";
 import { history, recall } from "~/lib/memory.server";
+import { LanguagePick } from "~/components/languages";
 import { ReadingScore } from "~/components/score";
 import { ThemePick } from "~/components/theme-pick";
 import { tongueOf } from "~/lib/languages";
+import { post } from "~/lib/api";
 import { say, speakIn } from "~/lib/talk";
 import type { Route } from "./+types/me";
 
@@ -39,13 +41,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function Me({ loaderData }: Route.ComponentProps) {
   const { kid, memories, read, waitMinutes } = loaderData;
-  useEffect(() => speakIn(tongueOf(kid.language).tag), [kid.language]);
+  const again = useRevalidator();
+  const [tongue, setTongue] = useState(kid.language);
+  useEffect(() => speakIn(tongueOf(tongue).tag), [tongue]);
   const best = read.reduce((top, row) => Math.max(top, row.wcpm), 0);
 
   return (
     <Screen id="page-me">
-      <TopNav left={<span className="text-lg font-medium">{kid.name}</span>} right={<Crumbs kid={kid} />} />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-5 pb-6">
+      <TopNav width="max-w-[1100px]" left={<span className="text-lg font-medium">{kid.name}</span>} right={<Crumbs kid={kid} />} />
+      <main className="mx-auto w-full max-w-[1100px] flex-1 px-5 pb-6">
         <div className="mb-6 flex items-center gap-4">
           <Buddy mood="cheer" size={120} className="breathe" />
           <div>
@@ -65,6 +69,17 @@ export default function Me({ loaderData }: Route.ComponentProps) {
           <Tile icon={<Heart on={kid.hearts > 0} size={28} />} value={kid.hearts} label={kid.hearts < MAX_HEARTS ? `+1 in ${waitMinutes}m` : "hearts"} />
           <Tile value={best} label="best words a minute" />
         </dl>
+
+        <section className="card mb-6 p-5">
+          <h2 className="text-xl">Multilanguage stories and reading</h2>
+          <LanguagePick
+            now={tongue}
+            pick={(language) => {
+              setTongue(language);
+              void post("/api/settings", { name: kid.name, age: kid.age, language }).then(() => again.revalidate());
+            }}
+          />
+        </section>
 
         <section className="card mb-6 p-5">
           <h2 className="text-xl">How it looks</h2>

@@ -4,7 +4,6 @@ import { useNavigate, useRevalidator } from "react-router";
 
 import { post, send } from "~/lib/api";
 import { Flame, Heart, Star } from "./icons";
-import { LanguageRow } from "./languages";
 import { ThemePick } from "./theme-pick";
 import { VoiceRow } from "./voices";
 
@@ -116,10 +115,6 @@ export function Progress({ onClose }: { onClose: () => void }) {
 
             <Row label="Theme">
               <ThemePick />
-            </Row>
-
-            <Row label="Multilanguage stories and reading">
-              <LanguageRow now={data.kid.language} pick={(language) => save({ language })} />
             </Row>
 
             <Row label="How old is the reader?">

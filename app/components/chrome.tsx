@@ -4,7 +4,7 @@ import { NavLink } from "react-router";
 import { useIntro } from "~/lib/motion";
 
 import { Head } from "./buddy";
-import { Flame, Heart, Hearts, Star } from "./icons";
+import { Hearts } from "./icons";
 import { Progress } from "./progress";
 
 export function Meter({ at, of }: { at: number; of: number }) {
@@ -19,14 +19,16 @@ export function TopNav({
   left,
   middle,
   right,
+  width = "max-w-3xl",
 }: {
   left?: React.ReactNode;
   middle?: React.ReactNode;
   right?: React.ReactNode;
+  width?: string;
 }) {
   return (
     <header id="top-nav" className="sticky top-0 z-20 bg-page/85 backdrop-blur-md">
-      <div className="mx-auto flex h-20 w-full max-w-3xl items-center gap-4 px-5">
+      <div className={`mx-auto flex h-20 w-full items-center gap-4 px-5 ${width}`}>
         {left}
         {middle ?? <span className="flex-1" />}
         {right}
@@ -46,15 +48,11 @@ export function Crumbs({ kid }: { kid: { name: string; hearts: number; streak: n
         title="Your progress"
         className="flex items-center gap-3 rounded-2xl border-2 border-line bg-surface px-3 py-1.5 font-medium hover:border-leaf"
       >
-        <span className="flex items-center gap-1 text-sun-ink">
-          <Flame on={kid.streak > 0} size={22} /> {kid.streak}
-        </span>
-        <span className="flex items-center gap-1">
-          <Star size={22} /> {kid.stars}
-        </span>
-        <span className="flex items-center gap-1 text-berry-ink">
-          <Heart size={22} /> {kid.hearts}
-        </span>
+        <span className="mono text-sun-ink">{kid.streak} day</span>
+        <span className="mono text-muted">·</span>
+        <span className="mono">{kid.stars} stars</span>
+        <span className="mono text-muted">·</span>
+        <span className="mono text-berry-ink">{kid.hearts} hearts</span>
       </button>
       {open && <Progress onClose={() => setOpen(false)} />}
     </>
