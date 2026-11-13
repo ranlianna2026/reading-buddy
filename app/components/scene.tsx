@@ -224,6 +224,8 @@ export function Scene({
     turn: rnd() * 360,
     wait: rnd() * 6,
   }));
+  const figSize = 58 + rnd() * 26;
+  const figX = Math.min(28 + rnd() * 126, 206 - figSize);
   const clouds = Array.from({ length: 3 }, (_, i) => ({
     x: 20 + rnd() * 200,
     y: 44 + i * 26 + rnd() * 10,
@@ -372,9 +374,17 @@ export function Scene({
         </g>
       )}
 
-      <ellipse cx="177" cy={FEET + 1} rx="24" ry="5" fill={look.deep} opacity="0.26" filter={`url(#soft${uid})`} />
-      <g transform={`translate(142 ${FEET - 77})`} {...move("rb-bob", 5.4)}>
-        <Buddy size={70} />
+      <ellipse
+        cx={figX + figSize / 2}
+        cy={FEET + 1}
+        rx={figSize * 0.34}
+        ry="5"
+        fill={look.deep}
+        opacity="0.26"
+        filter={`url(#soft${uid})`}
+      />
+      <g transform={`translate(${figX} ${FEET - figSize * 1.0917})`}>
+        <Buddy size={figSize} />
       </g>
 
       <g filter={`url(#wash${uid})`}>

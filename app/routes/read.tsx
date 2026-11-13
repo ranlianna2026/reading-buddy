@@ -8,7 +8,6 @@ import { Mic } from "~/components/mic";
 import { Cover } from "~/components/cover";
 import { Passage } from "~/components/passage";
 import { Scene, type Place } from "~/components/scene";
-import { Idea, IDEAS } from "~/components/picks";
 import { post } from "~/lib/api";
 import { userOf } from "~/lib/auth.server";
 import { band, heartsNow } from "~/lib/kid";
@@ -256,21 +255,6 @@ export default function Read({ loaderData }: Route.ComponentProps) {
               if (!busy) fetchStory(topic.trim());
             }}
           >
-            <ul className="grid grid-cols-2 gap-3">
-              {IDEAS.map(({ word, Art }) => (
-                <li key={word}>
-                  <button
-                    type="button"
-                    className="btn btn-quiet h-16 w-full justify-start gap-3 px-4 text-[15px]"
-                    onClick={() => setTopic(topic === word ? "" : word)}
-                    aria-pressed={topic === word}
-                  >
-                    <Idea Art={Art} />
-                    {word}
-                  </button>
-                </li>
-              ))}
-            </ul>
             <button className="btn btn-leaf w-full" disabled={Boolean(busy)}>
               {busy === "story" ? "Fig is writing…" : topic.trim() ? "Write it" : "Surprise me"}
             </button>
@@ -388,7 +372,9 @@ export default function Read({ loaderData }: Route.ComponentProps) {
       <TopNav left={<span className="text-lg font-medium">{kid.name}</span>} right={<Crumbs kid={kid} />} />
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-6">
         <div className="mb-6 flex justify-center">
-          <Cover title={story.title} by={story.by} seed={story.seed} place={story.place} wide />
+          <div className="w-52">
+            <Cover title={story.title} by={story.by} seed={story.seed} place={story.place} />
+          </div>
         </div>
         {result && <After title={story.title} score={result} report={report} again={() => setStage("pick")} home={() => go("/me")} />}
         {busy === "finish" && <p className="mt-4 text-center text-muted">Fig is writing it down…</p>}

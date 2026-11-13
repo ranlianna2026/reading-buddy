@@ -1,7 +1,8 @@
+import { startRegistration } from "@simplewebauthn/browser";
 import { useEffect, useState } from "react";
 import { useNavigate, useRevalidator } from "react-router";
 
-import { post } from "~/lib/api";
+import { post, send } from "~/lib/api";
 import { readTheme, writeTheme, type Theme } from "~/lib/theme";
 import { Flame, Heart, Star } from "./icons";
 import { VoiceRow } from "./voices";
@@ -67,6 +68,21 @@ export function Progress({ onClose }: { onClose: () => void }) {
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "That did not save.");
     }
+  };
+
+  const addPasskey = async () => {
+    try {
+      const options = await post<Parameters<typeof startRegistration>[0]["optionsJSON"]>("/api/passkey/add-options", {});
+      await post("/api/passkey/add", { response: await startRegistration({ optionsJSON: options }), label: "This device" });
+      setSaved(true);
+    } catch (problem) {
+      setError(problem instanceof Error ? problem.message : "That did not work.");
+    }
+  };
+
+  const signOut = async () => {
+    await send("/api/auth/signout", new FormData());
+    go("/hello");
   };
 
   const pickTheme = (next: Theme) => {
@@ -163,6 +179,14 @@ export function Progress({ onClose }: { onClose: () => void }) {
               <button className="btn btn-quiet mt-3 w-full" onClick={() => { onClose(); go("/me"); }}>
                 What Fig remembers
               </button>
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                <button className="btn btn-quiet flex-1" onClick={addPasskey}>
+                  Add a passkey
+                </button>
+                <button className="btn btn-quiet flex-1" onClick={signOut}>
+                  Sign out
+                </button>
+              </div>
             </Row>
 
             {saved && <p className="text-sm text-leaf-ink">Saved.</p>}

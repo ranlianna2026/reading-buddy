@@ -1,10 +1,7 @@
-import { startRegistration } from "@simplewebauthn/browser";
-import { useState } from "react";
-import { redirect, useNavigate } from "react-router";
+import { redirect } from "react-router";
 
 import { Buddy } from "~/components/buddy";
 import { BottomNav, Crumbs, Flame, Heart, Screen, Star, TopNav } from "~/components/chrome";
-import { post, send } from "~/lib/api";
 import { userOf } from "~/lib/auth.server";
 import { heartsNow, MAX_HEARTS, nextHeartIn } from "~/lib/kid";
 import { kidOf } from "~/lib/kid.server";
@@ -36,27 +33,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export default function Me({ loaderData }: Route.ComponentProps) {
-  const { kid, email, memories, read, waitMinutes } = loaderData;
-  const go = useNavigate();
-  const [note, setNote] = useState("");
+  const { kid, memories, read, waitMinutes } = loaderData;
   const best = read.reduce((top, row) => Math.max(top, row.wcpm), 0);
-
-  const addPasskey = async () => {
-    setNote("");
-    try {
-      const options = await post<Parameters<typeof startRegistration>[0]["optionsJSON"]>("/api/passkey/add-options", {});
-      const response = await startRegistration({ optionsJSON: options });
-      await post("/api/passkey/add", { response, label: "This device" });
-      setNote("Passkey saved. Next time, no password.");
-    } catch (problem) {
-      setNote(problem instanceof Error ? problem.message : "That did not work.");
-    }
-  };
-
-  const signOut = async () => {
-    await send("/api/auth/signout", new FormData());
-    go("/hello");
-  };
 
   return (
     <Screen id="page-me">
@@ -77,7 +55,7 @@ export default function Me({ loaderData }: Route.ComponentProps) {
           <Tile value={best} label="best words a minute" />
         </dl>
 
-        <section className="card mb-6 p-5">
+        <section className="card p-5">
           <h2 className="text-xl">What Fig remembers</h2>
           {memories.length === 0 ? (
             <p className="mt-2 text-muted">Nothing yet. Read a story and Fig will start remembering.</p>
@@ -98,19 +76,6 @@ export default function Me({ loaderData }: Route.ComponentProps) {
           )}
         </section>
 
-        <section className="card p-5">
-          <h2 className="text-xl">Grown-ups</h2>
-          <p className="mt-1 text-muted">{email}</p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <button className="btn btn-quiet flex-1" onClick={addPasskey}>
-              Add a passkey
-            </button>
-            <button className="btn btn-quiet flex-1" onClick={signOut}>
-              Sign out
-            </button>
-          </div>
-          {note && <p className="mt-3 text-leaf-ink">{note}</p>}
-        </section>
       </main>
       <BottomNav />
     </Screen>
