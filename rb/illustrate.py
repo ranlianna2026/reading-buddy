@@ -4,6 +4,8 @@
   generated picture): /images/edits draws the page's moment in the reference's style and characters.
 - Without one (a story told only by voice): /images/generations draws the first picture from scratch; the
   page then becomes the reference for the rest of the book, so characters stay consistent.
+- If drawing from the reference fails (an unreachable book image, a rejected upload), the page is drawn from
+  scratch instead, so every page still gets a picture.
 $0.01 per image. Cached on disk by (reference, text, kind).
 """
 import base64, hashlib, os
@@ -27,7 +29,16 @@ STYLES = {
 
 
 def illustrate(page_text, ref_image=None, title="", kind="book", cast=""):
-    """Returns a data URL (jpeg)."""
+    """Returns a data URL (jpeg). Falls back to a from-scratch drawing when the reference can't be used."""
+    if ref_image:
+        try:
+            return _draw(page_text, ref_image, title, kind, cast)
+        except Exception:
+            pass                                    # bad or unreachable reference: draw it fresh below
+    return _draw(page_text, None, title, "new", cast)
+
+
+def _draw(page_text, ref_image=None, title="", kind="book", cast=""):
     key = hashlib.sha1(f"{(ref_image or '')[:4000]}|{page_text}|{kind}|{cast}".encode()).hexdigest()[:20]
     path = CACHE / f"{key}.jpg"
     if path.exists():

@@ -333,6 +333,7 @@ function renderProfile(p){
     <div style="font-size:13px;margin-top:4px">Practicing: ${p.practice.length ? p.practice.map(w => `<b style="color:#8a4b00">${w}</b>`).join(", ") : "–"}${p.mastered.length ? ` · mastered ⭐ ${p.mastered.length}` : ""}</div>`;
 }
 loadProfile().then(() => { if (S.profile.history.length) $("#say").innerHTML = `Welcome back, ${LEARNER()}! 🌟 Want to <b>read a book</b>, or <b>make your own story</b>?`; });
+const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const post = (url, body) => fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ lang: BL(), ...body })})
   .then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.statusText); return j; });
 
@@ -398,16 +399,17 @@ function renderPassage(){
     const ws = toks(t), start = gi; gi += ws.length;
     const html = ws.map((w, k) => `<span data-i="${start + k}">${w.replace(/</g,"&lt;")}</span>`).join(SEP());
     const ii = b.pages && b.pages[pi] ? b.pages[pi].image_index : -1;
-    const img = b.via === "story" ? (S.storyImgs[ii] || S.storyImgs[pi % Math.max(1, S.storyImgs.length)] || "")
+    const own = b.imgs || [];                                          // the child's drawings for this story
+    const img = b.via === "story" ? (own[ii] || own[pi % Math.max(1, own.length)] || "")
               : b.via === "muse-vision" ? (S.photoUrl || "")
               : (b.pages && b.pages[pi] && b.pages[pi].image_url) || "";       // the book's own illustrations
     return { start, end: gi, html, img, text: t, gen: null };
   });
-  planPictures();
   $("#passage").innerHTML = S.pages.map((p, i) => `<div class="pg" data-p="${i}" hidden>${p.html}</div>`).join("");
   $("#dots").innerHTML = S.pages.map((_, i) => `<span data-p="${i}"></span>`).join("");
   document.querySelectorAll("#dots span").forEach(d => d.onclick = () => showPage(+d.dataset.p));
   showPage(0);
+  planPictures();                     // after page 1 is on screen (planPictures redraws the current page)
 }
 function showPage(n){
   n = Math.max(0, Math.min(n, S.pages.length - 1));
@@ -415,7 +417,7 @@ function showPage(n){
   document.querySelectorAll("#passage .pg").forEach(d => d.hidden = +d.dataset.p !== n);
   document.querySelectorAll("#dots span").forEach(d => d.classList.toggle("on", +d.dataset.p === n));
   const pg = S.pages[n], img = pg.gen || pg.img;
-  const drawnFromIdea = (S.book.via === "story" && !S.storyImgs.length) || (S.book.via !== "story" && S.book.via !== "muse-vision" && !S.pages.some(p => p.img));
+  const drawnFromIdea = (S.book.via === "story" && !(S.book.imgs || []).length) || (S.book.via !== "story" && S.book.via !== "muse-vision" && !S.pages.some(p => p.img));
   const label = drawnFromIdea ? (S.book.via === "story" ? "✨ drawn by Buddy from your idea" : "✨ drawn by Buddy") : S.book.via === "story" ? "✨ new picture · in your drawing style" : "✨ new picture · in the original style";
   $("#pagepic").innerHTML = img ? `<img src="${img}" alt="">` + (pg.gen ? `<span class="badge">${label}</span>` : "")
                          : pg.pending ? `<div class="ph">🎨</div>` : "";
@@ -435,33 +437,52 @@ async function drawPicture(body, tries = 2){
   }
   return null;
 }
-// Muse Image: pages that would repeat a picture (or have none) get a new one drawn from the original picture
+// Muse Image: every page gets a picture. Pages that would repeat a picture (or have none) get a new one drawn
+// from a reference picture; with no reference at all, page 1 is drawn from scratch and becomes the reference.
 async function planPictures(){
-  const b = S.book, token = S.bookToken = Math.random(); let prev = null, ref = null;
-  const todo = [];
+  const b = S.book, token = S.bookToken = Math.random();
   const cast = b.plan ? `${b.plan.characters}. Setting: ${b.plan.setting}` : "";
-  const noPictures = b.via !== "story" && b.via !== "muse-vision" && !S.pages.some(p => p.img);
-  if ((b.via === "story" && !S.storyImgs.length) || noPictures) {
-    // told only by voice/text: draw page 1 from scratch, then use it as the reference for every other page
-    S.pages.forEach(p => p.pending = true); showPage(S.page);
-    const first = await drawPicture({ page_text: S.pages[0].text, title: b.title, kind: "new", cast });
-    if (S.bookToken !== token) return;
-    if (!first) { S.pages.forEach(p => p.pending = false); showPage(S.page); return; }
-    S.pages[0].gen = first; S.pages[0].pending = false; showPage(S.page);
-    S.pages.forEach((p, i) => { if (i > 0) { p.ref = first; todo.push(p); } });
-  } else S.pages.forEach((p, i) => {
-    ref = p.img || ref;
-    const story = b.via === "story";
-    if (ref && (story ? i > 0 : (!p.img || p.img === prev))) { p.pending = true; p.ref = ref; todo.push(p); }
+  const story = b.via === "story", photo = b.via === "muse-vision";
+  const firstImg = (S.pages.find(p => p.img) || {}).img || null;
+  const live = () => S.bookToken === token;
+  const refresh = p => { if (live() && (!p || S.pages.indexOf(p) === S.page)) showPage(S.page); };
+  let ref = firstImg, kind = !firstImg ? "series" : story ? "story" : "book";
+  if (!firstImg) {
+    // told only by voice/text, or a book without illustrations: draw page 1 from scratch (two tries), then use it
+    // as the reference for every other page so the characters stay the same
+    S.pages.forEach(p => p.pending = true); refresh();
+    ref = await drawPicture({ page_text: S.pages[0].text, title: b.title, kind: "new", cast }, 3);
+    if (!live()) return;
+    if (ref) { S.pages[0].gen = ref; S.pages[0].pending = false; refresh(); }
+  }
+  // which pages still need a picture of their own
+  let prev = null, seen = null;
+  const todo = S.pages.filter((p, i) => {
+    seen = p.img || seen; p.ref = seen || ref;                    // nearest picture at or before this page
+    const need = photo ? false
+               : !firstImg ? !p.gen
+               : story ? i > 0 || !p.img                          // child's drawings: page 1 shows the drawing itself
+               : !p.img || p.img === prev;                        // a book page without its own illustration
     prev = p.img || prev;
+    if (need) p.pending = true;
+    return need;
   });
-  const kind = noPictures ? "series" : b.via !== "story" ? "book" : S.storyImgs.length ? "story" : "series";
-  await Promise.all(todo.map(async p => {                           // all pages at once (well under the rate limit)
-    const img = await drawPicture({ page_text: p.text, ref_image: p.ref, title: b.title, kind, cast });
-    if (S.bookToken === token && img) p.gen = img;
-    p.pending = false;                                              // success or not, never leave a page "drawing"
-    if (S.bookToken === token && S.pages.indexOf(p) === S.page) showPage(S.page);
+  refresh();
+  await Promise.all(todo.map(async p => {                         // all pages at once (well under the rate limit)
+    // with a reference: draw in its style; without one (page 1 failed): draw from scratch
+    const img = await drawPicture(ref ? { page_text: p.text, ref_image: p.ref, title: b.title, kind, cast }
+                                      : { page_text: p.text, title: b.title, kind: "new", cast });
+    if (live() && img) p.gen = img;
+    p.pending = false;                                            // success or not, never leave a page "drawing"
+    refresh(p);
   }));
+  if (!live()) return;
+  // last resort: a page whose drawing failed shows the nearest picture in the book, so no page is ever blank
+  const pic = i => S.pages[i] && (S.pages[i].gen || S.pages[i].img);
+  S.pages.forEach((p, i) => { if (!p.gen && !p.img) {
+    for (let d = 1; d < S.pages.length; d++) { const near = pic(i - d) || pic(i + d); if (near) { p.img = near; break; } }
+  } p.pending = false; });
+  refresh();
 }
 const pageOf = i => S.pages.findIndex(p => i >= p.start && i < p.end);
 $("#prev").onclick = () => { stopListen(); showPage(S.page - 1); };
@@ -512,10 +533,16 @@ $("#newstory").onclick = () => { stopListen(); if (reader && reader.st.on) stopR
 
 // ---------- flow ----------
 async function loadBook(title){
-  $("#loading").innerHTML = `<span class="spinner"></span> Finding <b>${title}</b>…`;
-  say(`Great choice! Let me find ${title}.`);
-  try { S.book = await post("/api/book", { title, lang: S.lang }); }
-  catch (e) { $("#loading").textContent = ""; return say(`Hmm, I couldn't find that one. Try another book?`); }
+  // the server decides: a real book if we can find it, otherwise (or for "teach me about...") a story written for this child
+  const steps = [`📚 Looking for <b>${esc(title)}</b>…`, "🦉 Checking my bookshelf…", "✍️ Not on the shelf? I'll write it for you…",
+                 "🦊 Imagining the characters…", "🌍 Finding true facts…", "🎨 Getting the pictures ready…", "📖 Almost ready…"];
+  $("#loading").innerHTML = `<div class="writing"><div class="pen">🦉📚</div><div class="wstep" id="wstep">${steps[0]}</div><div class="wbar"><i></i></div></div>`;
+  let si = 0; const tick = setInterval(() => { si = Math.min(si + 1, steps.length - 1); const el = $("#wstep"); if (el) el.innerHTML = steps[si]; else clearInterval(tick); }, 3500);
+  say(`Great choice! Let me get ${title} for you.`);
+  try { S.book = await post("/api/ask", { text: title, learner: LEARNER(), lang: S.lang }); }
+  catch (e) { clearInterval(tick); $("#loading").textContent = ""; return say(`Hmm, something went wrong. Can you ask me again?`); }
+  finally { clearInterval(tick); }
+  S.book.imgs = [];
   showBook();
 }
 function showBook(){
@@ -528,6 +555,8 @@ function showBook(){
     const ok = v => v ? "✓" : "✗", c = b.check;
     $("#src").innerHTML = `✨ Written for ${LEARNER()} · ${b.level_label} <span title="checked by code: ${c.word_count} words, longest sentence ${c.longest_sentence} words${c.practice_used.length ? ", practice words: " + c.practice_used.join(", ") : ""}">${ok(c.word_count_ok && c.sentence_ok && !c.practice_missing.length)} level check</span>`
       + (b.facts.length ? ` · facts: ${b.facts.map(f => `<a href="${f.url}" target="_blank">${f.title}</a>`).join(", ")}` : "");
+    if (b.request === "book") $("#src").innerHTML = `✨ "${esc(b.asked)}" isn't on my shelf, so Buddy wrote a new story like it · ` + $("#src").innerHTML;
+    if (b.request === "topic") $("#src").innerHTML = `🌍 A story to learn about "${esc(b.asked)}" · ` + $("#src").innerHTML;
   }
   renderPassage(); resetSide();
   S.qsPromise = post("/api/questions", { passage: b.text, learner: LEARNER() });          // prepare questions while the child reads
@@ -720,7 +749,7 @@ async function makeStory(sequel = false){
   S.storyFiles.forEach(f => fd.append("files", f));
   const r = await fetch("/api/story", { method:"POST", body: fd }); const j = await r.json(); clearInterval(tick);
   if (!r.ok) { $("#loading").textContent = ""; $("#chooser").hidden = false; $("#langbar").hidden = false; return say(j.detail || "Oops, let's try again."); }
-  S.book = j; showBook();
+  S.book = { ...j, imgs: S.storyImgs }; showBook();
 }
 $("#makestory").onclick = () => { S.idea = ""; makeStory(false); };
 
