@@ -121,18 +121,28 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               </p>
             </div>
           </div>
-          <dl className="grid grid-cols-3 gap-3">
-            <Tile icon={<Flame on={me.totals.streak > 0} size={24} />} value={me.totals.streak} label="days in a row" />
-            <Tile value={me.totals.books} label="stories read" />
-            <Tile icon={<Star size={24} />} value={me.totals.mastered} label="words learned" />
-          </dl>
         </div>
 
-        <div className="mb-6 grid gap-4 sm:grid-cols-2">
+        <Link
+          to="/parent"
+          className="panel mb-6 flex flex-col items-center gap-5 p-6 transition-transform hover:-translate-y-0.5 sm:flex-row sm:items-center"
+        >
+          <BigBook />
+          <div className="min-w-0 flex-1">
+            <p className="text-xl">Parent dashboard</p>
+            <p className="text-muted">Day by day, for grown-ups.</p>
+            <dl className="mt-4 grid grid-cols-3 gap-3">
+              <Stat icon={<Flame on={me.totals.streak > 0} size={22} />} value={me.totals.streak} label="days in a row" />
+              <Stat value={me.totals.books} label="stories read" />
+              <Stat icon={<Star size={22} />} value={me.totals.mastered} label="words learned" />
+            </dl>
+          </div>
+        </Link>
+
+        <div className="mb-6 grid gap-4 sm:grid-cols-3">
           <Door to="/read" title="Read a book" note="Fig writes one, you read it out loud." />
           <Door to="/library" title="My stories" note="The shelf of everything you have read." />
           <Door to="/me" title="My reading" note="One score, your words, your language." />
-          <Door to="/parent" title="Parent dashboard" note="Day by day, for grown-ups." />
         </div>
 
         {speed.length > 1 && (
@@ -190,13 +200,28 @@ function Door({ to, title, note }: { to: string; title: string; note: string }) 
   );
 }
 
-function Tile({ icon, value, label }: { icon?: React.ReactNode; value: string | number; label: string }) {
+function Stat({ icon, value, label }: { icon?: React.ReactNode; value: string | number; label: string }) {
   return (
-    <div className="panel flex flex-col items-center gap-0.5 px-3 py-4">
+    <div className="flex flex-col items-center gap-0.5 rounded-2xl bg-sunk px-3 py-3">
       {icon}
       <dd className="text-2xl font-medium">{value}</dd>
       <dt className="text-center text-xs text-muted">{label}</dt>
     </div>
+  );
+}
+
+// The way in to the grown-up view: a book big enough for a child to hand over.
+function BigBook() {
+  return (
+    <svg viewBox="0 0 120 96" width="124" height="99" className="shrink-0" aria-hidden>
+      <g fill="none" stroke="var(--rb-leaf-ink)" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round">
+        <path d="M60 24C50 15 36 11 16 11v62c20 0 34 4 44 13 10-9 24-13 44-13V11c-20 0-34 4-44 13z" fill="var(--rb-leaf-soft)" />
+        <path d="M60 24v62" />
+        <path d="M28 30c8 1 15 3 21 7M28 44c8 1 15 3 21 7M28 58c8 1 15 3 21 7" strokeWidth="3" opacity="0.65" />
+        <path d="M92 30c-8 1-15 3-21 7M92 44c-8 1-15 3-21 7M92 58c-8 1-15 3-21 7" strokeWidth="3" opacity="0.65" />
+      </g>
+      <path d="M60 86c10-9 24-13 44-13v8c-20 0-34 4-44 13-10-9-24-13-44-13v-8c20 0 34 4 44 13z" fill="var(--rb-leaf)" opacity="0.5" />
+    </svg>
   );
 }
 
