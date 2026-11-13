@@ -2,7 +2,8 @@ import { env } from "cloudflare:workers";
 
 const COOKIE = "rb_session";
 const TTL = 60 * 60 * 24 * 60 * 1000;
-const ROUNDS = 150_000;
+// Workers refuse PBKDF2 above 100,000 iterations; dev allows more, so this only shows up in production.
+const ROUNDS = 100_000;
 
 export type User = { id: string; email: string };
 
@@ -16,9 +17,9 @@ const sha256 = async (text: string) => b64url(await crypto.subtle.digest("SHA-25
 
 export const id = () => crypto.randomUUID();
 
-async function derive(password: string, salt: Uint8Array) {
+async function derive(password: string, salt: Uint8Array, rounds = ROUNDS) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
-  return crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt as BufferSource, iterations: ROUNDS, hash: "SHA-256" }, key, 256);
+  return crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt as BufferSource, iterations: rounds, hash: "SHA-256" }, key, 256);
 }
 
 export async function hashPassword(password: string) {
@@ -29,8 +30,9 @@ export async function hashPassword(password: string) {
 export async function checkPassword(password: string, stored: string | null) {
   if (!stored) return false;
   const [, rounds, salt, hash] = stored.split(".");
-  if (Number(rounds) !== ROUNDS) return false;
-  const made = b64url(await derive(password, unb64url(salt)));
+  const spins = Number(rounds);
+  if (!spins || spins > ROUNDS) return false;
+  const made = b64url(await derive(password, unb64url(salt), spins));
   if (made.length !== hash.length) return false;
   let same = 0;
   for (let i = 0; i < made.length; i++) same |= made.charCodeAt(i) ^ hash.charCodeAt(i);
