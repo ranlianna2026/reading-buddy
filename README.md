@@ -139,6 +139,10 @@ a correct answer always moves on and the last try never asks for another. Fig re
 for children who cannot read them yet, two silent tries move the quiz along rather than stall, and a
 child who disagrees can say **I think I was right** for a careful second opinion.
 
+A child who only listened to Fig read can tap **I finished the book** to go straight to the questions.
+That is scored as listening: no words a minute, no accuracy, the reading level held where it is, and
+the session left out of the reading score rather than counted as a zero.
+
 The level is not fixed to the grade. After every reading the standard instructional bands move it:
 95% accuracy with two thirds of the questions understood goes up a level, under 90% accuracy (or under
 a third understood) goes down, anything between stays for more practice. The grade sets where a reader
@@ -158,6 +162,19 @@ Three measures, one number out of a hundred, on the profile — the third tab in
 They weight 30 / 35 / 35 into a single score with a band (Getting started → Soaring), the grade's
 label, and the move since the earlier half of the reader's history. The same number appears on the
 report card at the end of a story, and is stored per reading in D1.
+
+## Pictures
+
+Beside the pixel scene, every story gets a painted page. `app/lib/picture.server.ts` is the Python
+app's Muse Image step in TypeScript: the same four styles (`book`, `story`, `series`, `new`), the same
+prompt, and the same reference-edit flow — with a reference it calls `/images/edits` so a book's pages
+keep the same characters and look, without one it calls `/images/generations` and that first picture
+becomes the reference. It draws with Muse Image when `MODEL_API_KEY` is set and with Workers AI
+otherwise, so a picture always arrives. Results are cached in R2 by reference, text and kind, and
+served back from `/api/picture`.
+
+It is additive: the seeded pixel scene draws instantly and stays on the page under the painting, and
+it is still what the book covers are made of.
 
 ## Languages
 
