@@ -2,6 +2,7 @@ import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration }
 
 import type { Route } from "./+types/root";
 import { Buddy } from "./components/buddy";
+import { NO_FLASH } from "./lib/theme";
 import "./app.css";
 
 export const meta: Route.MetaFunction = () => [
@@ -22,6 +23,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <Meta />
         <Links />
+        <script dangerouslySetInnerHTML={{ __html: NO_FLASH }} />
       </head>
       <body>
         {children}

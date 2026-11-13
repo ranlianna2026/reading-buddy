@@ -12,7 +12,8 @@
     "AI_MODEL": "celeris-1",
     "AI_API_KEY": "ck_lr4DZmrZG1zNmAHb8oinCRb7I3exN8AzaiaZnpAF2IA",
     "STT_MODEL": "whisper-1",
-    "VOICE_ID": "21m00Tcm4TlvDq8ikWAM",
+    "ELEVENLABS_API_KEY": "sk_0533ce5bd0cadf22c5a53c7c51c52c6c9df2849652c09467",
+    "VOICE_ID": "cgSgspJ2msm6clMCkdW9",
     "VOICE_MODEL": "eleven_turbo_v2_5",
     "PRODUCT_NAME": "Reading Buddy"
   },

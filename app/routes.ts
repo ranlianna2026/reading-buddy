@@ -8,6 +8,7 @@ export default [
   route("me", "routes/me.tsx"),
   route("api/auth/:action", "routes/api.auth.$action.ts"),
   route("api/passkey/:step", "routes/api.passkey.$step.ts"),
+  route("api/settings", "routes/api.settings.ts"),
   route("api/story", "routes/api.story.ts"),
   route("api/talk", "routes/api.talk.ts"),
   route("api/speak", "routes/api.speak.ts"),

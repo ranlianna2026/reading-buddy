@@ -99,7 +99,39 @@ export async function say(text: string, mood: "read" | "ask" | "cheer" = "read")
   }
 }
 
-function browserVoice(text: string) {
+export async function sayAlong(text: string, onWord: (index: number) => void) {
+  hush();
+  try {
+    const res = await fetch("/api/speak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, mood: "read", along: true }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const { audio, marks } = (await res.json()) as { audio: string; marks: number[] };
+    if (!audio || !marks.length) throw new Error("No timings came back.");
+    const bytes = Uint8Array.from(atob(audio), (letter) => letter.charCodeAt(0));
+    const player = new Audio(URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" })));
+    playing = player;
+    await player.play();
+    let at = 0;
+    const follow = () => {
+      if (playing !== player) return;
+      while (at < marks.length && marks[at] <= player.currentTime) onWord(at++);
+      if (!player.paused && !player.ended) requestAnimationFrame(follow);
+    };
+    requestAnimationFrame(follow);
+    await new Promise<void>((done) => {
+      player.onended = () => done();
+      player.onerror = () => done();
+    });
+    onWord(marks.length);
+  } catch {
+    await browserVoice(text, onWord);
+  }
+}
+
+function browserVoice(text: string, onWord?: (index: number) => void) {
   if (typeof speechSynthesis === "undefined") return;
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-US";
@@ -107,9 +139,18 @@ function browserVoice(text: string) {
   utterance.pitch = 1.1;
   const voice = speechSynthesis.getVoices().find((option) => /female|samantha|zira|aria|jenny/i.test(option.name) && option.lang.startsWith("en"));
   if (voice) utterance.voice = voice;
+  if (onWord) {
+    utterance.onboundary = (event) => {
+      if (event.name && event.name !== "word") return;
+      onWord(text.slice(0, event.charIndex).split(/\s+/).filter(Boolean).length);
+    };
+  }
   speechSynthesis.speak(utterance);
   return new Promise<void>((done) => {
-    utterance.onend = () => done();
+    utterance.onend = () => {
+      onWord?.(text.split(/\s+/).filter(Boolean).length);
+      done();
+    };
     utterance.onerror = () => done();
   });
 }

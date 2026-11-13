@@ -6,11 +6,12 @@ import { Buddy } from "~/components/buddy";
 import { ActionBar, BottomNav, Crumbs, Focus, Hearts, Meter, Screen, TopNav } from "~/components/chrome";
 import { Mic } from "~/components/mic";
 import { Passage } from "~/components/passage";
+import { Idea, IDEAS } from "~/components/picks";
 import { post } from "~/lib/api";
 import { userOf } from "~/lib/auth.server";
 import { heartsNow, kidOf } from "~/lib/kid.server";
 import { readingPlace, score as grade, type Score } from "~/lib/scoring";
-import { hear, hush, say } from "~/lib/talk";
+import { hear, hush, say, sayAlong } from "~/lib/talk";
 import type { Route } from "./+types/read";
 
 export const meta = () => [{ title: "Read · Reading Buddy" }];
@@ -45,6 +46,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [right, setRight] = useState(0);
   const [report, setReport] = useState<Report | null>(null);
+  const [figAt, setFigAt] = useState<number | undefined>(undefined);
   const mic = useRef<{ stop: () => void } | null>(null);
   const started = useRef(0);
   const asked = useRef(false);
@@ -64,6 +66,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
       setAt(0);
       setRight(0);
       setReport(null);
+      setFigAt(undefined);
       asked.current = false;
       post<{ questions: Question[] }>("/api/talk", { step: "questions", passage: made.passage, age: String(kid.age ?? 7) })
         .then((made) => setQuestions(made.questions))
@@ -74,9 +77,41 @@ export default function Read({ loaderData }: Route.ComponentProps) {
     setBusy("");
   };
 
+  const speakTopic = () => {
+    if (listening) {
+      mic.current?.stop();
+      return;
+    }
+    hush();
+    setError("");
+    setTopic("");
+    setListening(true);
+    mic.current = hear(
+      (said, settled) => {
+        setTopic(said);
+        if (settled && said.trim()) {
+          setListening(false);
+          fetchStory(said.trim());
+        }
+      },
+      (why) => {
+        setListening(false);
+        if (why) setError(why);
+      }
+    );
+  };
+
+  const figReads = async () => {
+    if (!story) return;
+    setFigAt(0);
+    await sayAlong(story.passage, setFigAt);
+    setFigAt(undefined);
+  };
+
   const startReading = () => {
     if (listening) return;
     hush();
+    setFigAt(undefined);
     started.current = Date.now();
     setListening(true);
     mic.current = hear(
@@ -223,17 +258,37 @@ export default function Read({ loaderData }: Route.ComponentProps) {
               placeholder="a brave snail, outer space, my dog…"
               className="h-16 rounded-2xl border-2 border-line bg-surface px-5 text-center text-lg outline-none focus:border-leaf"
             />
-            <ul className="flex flex-wrap justify-center gap-2">
-              {["dinosaurs", "a lost kitten", "the deep sea", "a silly robot", "a birthday", "dragons"].map((idea) => (
-                <li key={idea}>
-                  <button type="button" className="btn btn-quiet h-11 px-4 text-[15px]" onClick={() => setTopic(idea)}>
-                    {idea}
+            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {IDEAS.map(({ word, Art }) => (
+                <li key={word}>
+                  <button
+                    type="button"
+                    className="btn btn-quiet h-16 w-full justify-start gap-3 px-4 text-[15px]"
+                    onClick={() => setTopic(word)}
+                    aria-pressed={topic === word}
+                  >
+                    <Idea Art={Art} />
+                    {word}
                   </button>
                 </li>
               ))}
             </ul>
             <button className="btn btn-leaf w-full" disabled={Boolean(busy)}>
               {busy === "story" ? "Fig is writing…" : topic.trim() ? "Write it" : "Surprise me"}
+            </button>
+            <button
+              type="button"
+              onClick={speakTopic}
+              disabled={Boolean(busy)}
+              aria-pressed={listening}
+              className={`btn w-full gap-3 ${listening ? "btn-sun listening" : "btn-quiet"}`}
+            >
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                <rect x="9" y="2.5" width="6" height="11" rx="3" fill="currentColor" stroke="none" />
+                <path d="M5.5 11a6.5 6.5 0 0 0 13 0" />
+                <path d="M12 17.5V21M9 21h6" />
+              </svg>
+              {listening ? "Listening… say what you want" : "Voice create story"}
             </button>
           </form>
           {error && <p className="text-berry-ink">{error}</p>}
@@ -261,15 +316,15 @@ export default function Read({ loaderData }: Route.ComponentProps) {
         <main className="mx-auto w-full max-w-2xl flex-1 px-5">
           <h1 className="mb-3 text-center text-2xl">{story.title}</h1>
           <div className="card p-6">
-            <Passage text={story.passage} upTo={listening ? place : undefined} onWord={(word) => say(word, "read")} />
+            <Passage text={story.passage} upTo={listening ? place : figAt} onWord={(word) => say(word, "read")} />
           </div>
           {error && <p className="mt-3 text-center text-berry-ink">{error}</p>}
         </main>
         <ActionBar>
           <Mic on={listening} onClick={listening ? stopReading : startReading} label={listening ? "I'm done" : "Read to Fig"} />
           {!listening && (
-            <button className="btn btn-quiet" onClick={() => say(story.passage, "read")}>
-              Fig reads first
+            <button className="btn btn-quiet" onClick={figAt === undefined ? figReads : () => { hush(); setFigAt(undefined); }}>
+              {figAt === undefined ? "Fig reads first" : "Stop Fig"}
             </button>
           )}
         </ActionBar>
