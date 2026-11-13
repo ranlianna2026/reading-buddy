@@ -89,7 +89,7 @@ child's name on it. The same art animates beside the passage while they read.
 | `app/lib/picture.server.ts` | The picture model: Muse Image styles, prompts and reference edits, cached in R2 |
 | `app/components/cover.tsx` | A book: spine, letterpress title, chapter rule, the art, the byline |
 | `app/components/voices.tsx` | Voice: female, male, every voice model and id, and cloning your own |
-| `legacy-python/` | The first Reading Buddy, FastAPI and Gutenberg. Kept for its scoring and prompts |
+| `legacy-python/` | The first Learning Buddy, FastAPI and Gutenberg. Kept for its scoring and prompts |
 
 ## The look
 

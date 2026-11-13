@@ -10,7 +10,7 @@ import { userOf } from "~/lib/auth.server";
 import { kidsOf } from "~/lib/kid.server";
 import type { Route } from "./+types/hello";
 
-export const meta = () => [{ title: "Hello · Reading Buddy" }];
+export const meta = () => [{ title: "Hello · Learning Buddy" }];
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await userOf(request);
@@ -100,7 +100,7 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
                 ))}
               </div>
               <p className="mt-2 text-sm text-muted">
-                Reading Buddy writes for {SPAN}. The grade sets the first reading level and the words-a-minute
+                Learning Buddy writes for {SPAN}. The grade sets the first reading level and the words-a-minute
                 Fig measures against; it moves with them as they read.
               </p>
             </fieldset>
@@ -131,7 +131,7 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
     <Screen id="page-hello">
       <Focus intro={mode + String(byEmail)} className="max-w-sm">
         <Buddy mood="hi" size={180} className="breathe" />
-        <h1 className="text-4xl">Reading Buddy</h1>
+        <h1 className="text-4xl">Learning Buddy</h1>
         <p className="text-muted">Pick a story, read it out loud, then talk about it.</p>
 
         {!byEmail ? (

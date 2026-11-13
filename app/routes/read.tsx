@@ -20,7 +20,7 @@ import { reading as compile } from "~/lib/report";
 import { hear, hush, say, sayAlong, speakIn } from "~/lib/talk";
 import type { Route } from "./+types/read";
 
-export const meta = () => [{ title: "Read · Reading Buddy" }];
+export const meta = () => [{ title: "Read · Learning Buddy" }];
 
 function Arrow() {
   return (

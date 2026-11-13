@@ -10,7 +10,7 @@ import { reading } from "~/lib/kid.server";
 import { history } from "~/lib/memory.server";
 import type { Route } from "./+types/library";
 
-export const meta = () => [{ title: "Stories · Reading Buddy" }];
+export const meta = () => [{ title: "Stories · Learning Buddy" }];
 
 const SHELVES = [
   { name: "Animals", ideas: ["a brave snail", "a lost kitten", "the oldest tortoise", "a fox in the snow"] },

@@ -13,7 +13,7 @@ import { levelLabel, levelName, SKILLS } from "~/lib/levels";
 import { dashboard } from "~/lib/parent.server";
 import type { Route } from "./+types/home";
 
-export const meta = () => [{ title: "Reading Buddy" }];
+export const meta = () => [{ title: "Learning Buddy" }];
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await userOf(request);
@@ -56,7 +56,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   return (
     <Screen id="page-home">
-      <TopNav left={<span className="text-lg font-medium">Reading Buddy</span>} right={<Crumbs kid={kid} />} />
+      <TopNav left={<span className="text-lg font-medium">Learning Buddy</span>} right={<Crumbs kid={kid} />} />
       <main className={`mx-auto w-full flex-1 px-5 pb-6 ${PAGE}`}>
         <div className="mb-6 flex flex-wrap items-center gap-4">
           <Buddy mood="hi" size={110} className="breathe shrink-0" />

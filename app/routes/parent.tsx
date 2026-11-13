@@ -10,7 +10,7 @@ import { dashboard, type Day } from "~/lib/parent.server";
 import { average } from "~/lib/report";
 import type { Route } from "./+types/parent";
 
-export const meta = () => [{ title: "Parent dashboard · Reading Buddy" }];
+export const meta = () => [{ title: "Parent dashboard · Learning Buddy" }];
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await userOf(request);

@@ -6,10 +6,10 @@ import { NO_FLASH } from "./lib/theme";
 import "./app.css";
 
 export const meta: Route.MetaFunction = () => [
-  { title: "Reading Buddy" },
+  { title: "Learning Buddy" },
   { name: "description", content: "Pick a story, read it out loud to Fig, and talk about it. A reading buddy for kids." },
   { name: "theme-color", content: "#f3efe6" },
-  { property: "og:title", content: "Reading Buddy" },
+  { property: "og:title", content: "Learning Buddy" },
   { property: "og:image", content: "/fig-og.avif" },
 ];
 
