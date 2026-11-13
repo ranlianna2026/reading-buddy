@@ -2,36 +2,52 @@ import { Link } from "react-router";
 
 import { Scene, type Place } from "./scene";
 
+const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+
 export function Cover({
   title,
   by,
   seed,
   place,
+  label,
+  note,
   to,
+  n,
 }: {
   title: string;
   by?: string;
   seed: number;
   place: Place;
+  label?: string;
+  note?: string;
   to?: string;
+  n?: number;
 }) {
   const book = (
-    <figure
-      className="relative h-full overflow-hidden rounded-l-sm rounded-r-2xl border-2 border-line bg-surface"
-      style={{ boxShadow: "inset 8px 0 0 -4px var(--rb-shade), 0 10px 26px -16px var(--rb-shade)" }}
-    >
-      <Scene seed={seed} place={place} width={300} height={390} still alt={`${title}, drawn`} />
-      <figcaption
-        className="absolute inset-x-0 bottom-0 px-3.5 pt-10 pb-3"
-        style={{ background: "linear-gradient(transparent, oklch(0.16 0.022 84 / 0.76))" }}
-      >
-        <p className="text-[15px] leading-tight font-medium text-white">{title}</p>
-        {by && <p className="mt-0.5 text-[12px] text-white/70">by {by}</p>}
-      </figcaption>
-    </figure>
+    <div className="shelf h-full">
+      <article className="book h-full">
+        <div className="book-spine" aria-hidden />
+        <div className="flex grow flex-col">
+          <div className="px-4 pt-6">
+            <h3 className="letterpress line-clamp-2 h-[2.55em] text-[17px] leading-[1.25] font-medium text-ink/85">{title}</h3>
+          </div>
+          <div className="mt-5 px-4">
+            <div className="h-px bg-ink/10" />
+          </div>
+          <p className="mono mt-2.5 px-4 text-muted">{label ?? (n ? `Story ${ROMAN[(n - 1) % 12]}` : "A story")}</p>
+          <div className="mt-3 px-4">
+            <Scene seed={seed} place={place} w={150} h={132} className="rounded-sm" alt={`${title}, drawn`} />
+          </div>
+          <div className="mono mt-auto flex items-center justify-between px-4 pt-3.5 pb-3.5 text-muted">
+            <span>{by ? `by ${by}` : "unwritten"}</span>
+            <span>{note ?? ""}</span>
+          </div>
+        </div>
+      </article>
+    </div>
   );
   return to ? (
-    <Link to={to} className="block h-full rounded-r-2xl focus-visible:outline-offset-4">
+    <Link to={to} className="block h-full rounded-r-xl focus-visible:outline-offset-4">
       {book}
     </Link>
   ) : (

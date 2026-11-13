@@ -1,6 +1,7 @@
 import { askJson, count, guard, respond, text } from "~/lib/ai.server";
 import { userOf } from "~/lib/auth.server";
 import { kidOf } from "~/lib/kid.server";
+import { tongueOf } from "~/lib/languages";
 import { asPrompt, recall } from "~/lib/memory.server";
 import type { Route } from "./+types/api.story";
 
@@ -23,11 +24,14 @@ export async function action({ request }: Route.ActionArgs) {
     const topic = text(body.topic, 80);
     const memories = kid ? await recall(kid.id, 14) : [];
     const name = kid?.name ?? "the reader";
+    const tongue = tongueOf(kid?.language);
 
     const made = await askJson(
       `You write tiny original stories for a child to read out loud. Reading level: ${BANDS[level]}. ` +
         "Warm, funny, kind, never scary and never sad at the end. Plain words a child can sound out. " +
-        "No made-up spellings, no emoji, no headings inside the story. Answer with JSON only.",
+        "No made-up spellings, no emoji, no headings inside the story. Answer with JSON only. " +
+        `Write the title and the story in ${tongue.name}, in that language's own script and spelling, ` +
+        `as a native ${tongue.name} children's author would. The \"place\" and \"topic\" fields stay in English.`,
       `${asPrompt(name, memories)}\n\n` +
         (topic ? `${name} asked for a story about: ${topic}.\n` : `Pick a subject ${name} would love.\n`) +
         "Write the story and answer as JSON: " +
@@ -51,6 +55,8 @@ export async function action({ request }: Route.ActionArgs) {
       seed: seedOf(`${kid?.id ?? "guest"}:${title}:${passage.length}`),
       by: name,
       topic: text(made.topic, 90),
+      language: tongue.name,
+      tag: tongue.tag,
       stretch: Array.isArray(made.stretch) ? made.stretch.map((word) => text(word, 30)).filter(Boolean).slice(0, 3) : [],
       words: passage.split(/\s+/).filter(Boolean).length,
       level: Number(level),

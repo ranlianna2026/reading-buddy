@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { redirect } from "react-router";
 
 import { Buddy } from "~/components/buddy";
@@ -6,7 +7,9 @@ import { userOf } from "~/lib/auth.server";
 import { heartsNow, MAX_HEARTS, nextHeartIn } from "~/lib/kid";
 import { kidOf } from "~/lib/kid.server";
 import { history, recall } from "~/lib/memory.server";
-import { say } from "~/lib/talk";
+import { ThemePick } from "~/components/theme-pick";
+import { tongueOf } from "~/lib/languages";
+import { say, speakIn } from "~/lib/talk";
 import type { Route } from "./+types/me";
 
 export const meta = () => [{ title: "Me · Reading Buddy" }];
@@ -34,6 +37,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function Me({ loaderData }: Route.ComponentProps) {
   const { kid, memories, read, waitMinutes } = loaderData;
+  useEffect(() => speakIn(tongueOf(kid.language).tag), [kid.language]);
   const best = read.reduce((top, row) => Math.max(top, row.wcpm), 0);
 
   return (
@@ -54,6 +58,14 @@ export default function Me({ loaderData }: Route.ComponentProps) {
           <Tile icon={<Heart on={kid.hearts > 0} size={28} />} value={kid.hearts} label={kid.hearts < MAX_HEARTS ? `+1 in ${waitMinutes}m` : "hearts"} />
           <Tile value={best} label="best words a minute" />
         </dl>
+
+        <section className="card mb-6 p-5">
+          <h2 className="text-xl">How it looks</h2>
+          <p className="mono mt-1 text-muted">day · night · follow this device</p>
+          <div className="mt-3">
+            <ThemePick />
+          </div>
+        </section>
 
         <section className="card p-5">
           <h2 className="text-xl">What Fig remembers</h2>

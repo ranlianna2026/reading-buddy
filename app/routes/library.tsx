@@ -41,12 +41,16 @@ export default function Library({ loaderData }: Route.ComponentProps) {
           <section className="mb-7">
             <h2 className="mb-3 text-xl">Stories you have read</h2>
             <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {read.map((row) => (
-                <li key={row.id}>
-                  <Cover title={row.title} by={kid.name} seed={row.seed} place={row.place as Place} />
-                  <p className="mt-1.5 text-center text-xs text-muted">
-                    {row.wcpm} wpm · {row.accuracy}%
-                  </p>
+              {read.map((row, i) => (
+                <li key={row.id} className="h-full">
+                  <Cover
+                    title={row.title}
+                    by={kid.name}
+                    seed={row.seed}
+                    place={row.place as Place}
+                    n={read.length - i}
+                    note={`${row.wcpm} wpm`}
+                  />
                 </li>
               ))}
             </ul>
@@ -59,11 +63,13 @@ export default function Library({ loaderData }: Route.ComponentProps) {
               {shelf.ideas.map((idea) => {
                 const seed = seedOf(idea);
                 return (
-                  <li key={idea}>
+                  <li key={idea} className="h-full">
                     <Cover
                       title={idea[0].toUpperCase() + idea.slice(1)}
                       seed={seed}
                       place={PLACES[seed % PLACES.length]}
+                      label={shelf.name}
+                      note="unread"
                       to={`/read?topic=${encodeURIComponent(idea)}`}
                     />
                   </li>

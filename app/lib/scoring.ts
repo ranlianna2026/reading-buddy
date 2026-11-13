@@ -34,7 +34,9 @@ export function norm(token: string) {
   const bare = token
     .toLowerCase()
     .replace(/[‘’]/g, "'")
-    .replace(/[^a-z0-9']/g, "")
+    .normalize("NFD")
+    .replace(/\p{M}+/gu, "")
+    .replace(/[^\p{L}\p{N}']/gu, "")
     .replace(/^'+|'+$/g, "");
   return NUMBERS[bare] ?? bare;
 }

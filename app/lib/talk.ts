@@ -11,6 +11,10 @@ type Recognition = {
   onerror: ((event: { error: string }) => void) | null;
 };
 
+let tongue = "en-US";
+
+export const speakIn = (tag?: string | null) => void (tongue = tag || "en-US");
+
 const Engine = () =>
   typeof window === "undefined"
     ? null
@@ -28,7 +32,7 @@ export function hear(onWords: (said: string, settled: boolean) => void, onStop?:
     return { stop: () => {} };
   }
   const engine = new Make();
-  engine.lang = "en-US";
+  engine.lang = tongue;
   engine.continuous = true;
   engine.interimResults = true;
   engine.maxAlternatives = 1;
@@ -84,7 +88,7 @@ export async function say(text: string, mood: "read" | "ask" | "cheer" = "read")
     const res = await fetch("/api/speak", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, mood }),
+      body: JSON.stringify({ text, tag: tongue, mood }),
     });
     if (!res.ok) throw new Error(await res.text());
     const audio = new Audio(URL.createObjectURL(await res.blob()));
@@ -105,7 +109,7 @@ export async function sayAlong(text: string, onWord: (index: number) => void) {
     const res = await fetch("/api/speak", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, mood: "read", along: true }),
+      body: JSON.stringify({ text, tag: tongue, mood: "read", along: true }),
     });
     if (!res.ok) throw new Error(await res.text());
     const { audio, marks } = (await res.json()) as { audio: string; marks: number[] };
@@ -134,10 +138,11 @@ export async function sayAlong(text: string, onWord: (index: number) => void) {
 function browserVoice(text: string, onWord?: (index: number) => void) {
   if (typeof speechSynthesis === "undefined") return;
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US";
+  utterance.lang = tongue;
   utterance.rate = 0.92;
   utterance.pitch = 1.1;
-  const voice = speechSynthesis.getVoices().find((option) => /female|samantha|zira|aria|jenny/i.test(option.name) && option.lang.startsWith("en"));
+  const near = speechSynthesis.getVoices().filter((option) => option.lang.startsWith(tongue.slice(0, 2)));
+  const voice = near.find((option) => /female|samantha|zira|aria|jenny/i.test(option.name)) ?? near[0];
   if (voice) utterance.voice = voice;
   if (onWord) {
     utterance.onboundary = (event) => {

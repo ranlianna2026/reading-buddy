@@ -5,7 +5,7 @@ import { day, heartsNow, MAX_HEARTS, type Kid } from "./kid";
 
 export async function kidsOf(userId: string) {
   const rows = await env.DB.prepare(
-    "SELECT id, name, age, hearts, hearts_at, streak, streak_day, stars FROM kids WHERE user_id = ?1 ORDER BY created_at"
+    "SELECT id, name, age, hearts, hearts_at, streak, streak_day, stars, language FROM kids WHERE user_id = ?1 ORDER BY created_at"
   )
     .bind(userId)
     .all<Kid>();

@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { useNavigate, useRevalidator } from "react-router";
 
 import { post, send } from "~/lib/api";
-import { readTheme, writeTheme, type Theme } from "~/lib/theme";
 import { Flame, Heart, Star } from "./icons";
+import { LanguageRow } from "./languages";
+import { ThemePick } from "./theme-pick";
 import { VoiceRow } from "./voices";
 
 type Settings = {
@@ -24,30 +25,14 @@ type Settings = {
   };
 };
 
-const LANGUAGES = [
-  ["en", "English"],
-  ["es", "Español"],
-  ["fr", "Français"],
-  ["de", "Deutsch"],
-  ["pt", "Português"],
-] as const;
-
-const THEMES: [Theme, string][] = [
-  ["light", "Day"],
-  ["dark", "Night"],
-  ["system", "Auto"],
-];
-
 export function Progress({ onClose }: { onClose: () => void }) {
   const go = useNavigate();
   const again = useRevalidator();
   const [data, setData] = useState<Settings | null>(null);
-  const [theme, setTheme] = useState<Theme>("system");
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setTheme(readTheme());
     fetch("/api/settings")
       .then(async (res) => (res.ok ? ((await res.json()) as Settings) : Promise.reject(new Error(await res.text()))))
       .then(setData)
@@ -83,11 +68,6 @@ export function Progress({ onClose }: { onClose: () => void }) {
   const signOut = async () => {
     await send("/api/auth/signout", new FormData());
     go("/hello");
-  };
-
-  const pickTheme = (next: Theme) => {
-    setTheme(next);
-    writeTheme(next);
   };
 
   return (
@@ -135,21 +115,11 @@ export function Progress({ onClose }: { onClose: () => void }) {
             </Row>
 
             <Row label="Theme">
-              <Chips options={THEMES} now={theme} pick={pickTheme} />
+              <ThemePick />
             </Row>
 
-            <Row label="Language">
-              <select
-                value={data.kid.language}
-                onChange={(event) => save({ language: event.target.value })}
-                className="h-12 w-full rounded-2xl border-2 border-line bg-page px-3 outline-none focus:border-leaf"
-              >
-                {LANGUAGES.map(([code, name]) => (
-                  <option key={code} value={code}>
-                    {name}
-                  </option>
-                ))}
-              </select>
+            <Row label="Multilanguage stories and reading">
+              <LanguageRow now={data.kid.language} pick={(language) => save({ language })} />
             </Row>
 
             <Row label="How old is the reader?">
@@ -203,25 +173,6 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <h3 className="mb-2 font-medium">{label}</h3>
       {children}
     </section>
-  );
-}
-
-function Chips<T extends string>({ options, now, pick }: { options: readonly (readonly [T, string])[]; now: T; pick: (value: T) => void }) {
-  return (
-    <div className="flex gap-2">
-      {options.map(([value, label]) => (
-        <button
-          key={value}
-          onClick={() => pick(value)}
-          aria-pressed={value === now}
-          className={`h-12 flex-1 rounded-2xl border-2 font-medium ${
-            value === now ? "border-leaf bg-leaf-soft text-leaf-ink" : "border-line bg-page text-muted"
-          }`}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
   );
 }
 

@@ -5,7 +5,7 @@ import { Refusal } from "./ai.server";
 export type Voice = { id: string; name: string; gender: string; kind: string; mine: boolean; preview: string };
 
 export const PICKS = {
-  female: { id: "cgSgspJ2msm6clMCkdW9", name: "Jessica" },
+  female: { id: "zmcVlqmyk3Jpn5AVYcAL", name: "Sapphire" },
   male: { id: "bIHbv24MWmeRgasZH58o", name: "Will" },
 } as const;
 
@@ -44,13 +44,15 @@ export async function voices(): Promise<Voice[]> {
     .sort((a, b) => Number(b.mine) - Number(a.mine) || a.name.localeCompare(b.name));
 }
 
-async function voice(words: string, mood: Mood, path: string, id: string) {
+async function voice(words: string, mood: Mood, path: string, id: string, tag = "en-US") {
+  const tongue = tag.split("-")[0];
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${id}${path}?output_format=mp3_44100_128`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "xi-api-key": key() },
     body: JSON.stringify({
       text: words,
-      model_id: env.VOICE_MODEL || "eleven_turbo_v2_5",
+      model_id: tongue === "en" ? env.VOICE_MODEL || "eleven_turbo_v2_5" : "eleven_multilingual_v2",
+      language_code: tongue === "en" ? "en" : undefined,
       voice_settings: SETTINGS[mood],
     }),
   });
@@ -58,15 +60,15 @@ async function voice(words: string, mood: Mood, path: string, id: string) {
   return res;
 }
 
-export async function speak(words: string, mood: Mood = "read", id = FALLBACK()) {
-  const res = await voice(words, mood, "", id);
+export async function speak(words: string, mood: Mood = "read", id = FALLBACK(), tag = "en-US") {
+  const res = await voice(words, mood, "", id, tag);
   return new Response(res.body, {
     headers: { "Content-Type": "audio/mpeg", "Cache-Control": "private, max-age=3600" },
   });
 }
 
-export async function speakAlong(words: string, mood: Mood = "read", id = FALLBACK()) {
-  const res = await voice(words, mood, "/with-timestamps", id);
+export async function speakAlong(words: string, mood: Mood = "read", id = FALLBACK(), tag = "en-US") {
+  const res = await voice(words, mood, "/with-timestamps", id, tag);
   const made = (await res.json()) as {
     audio_base64?: string;
     alignment?: { characters?: string[]; character_start_times_seconds?: number[] };

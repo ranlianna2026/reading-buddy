@@ -1,10 +1,13 @@
 import { askJson, count, guard, respond, text, texts } from "~/lib/ai.server";
+import { tongueOf } from "~/lib/languages";
 import { norm } from "~/lib/scoring";
 import type { Route } from "./+types/api.talk";
 
-const VOICE = (age: string) =>
+const VOICE = (age: string, tongue: string) =>
   `You are Fig, a warm, patient reading buddy for a child aged ${age}. Short simple sentences. ` +
-  "Be encouraging and specific, never shame, and ground everything in the passage. Answer with JSON only.";
+  "Be encouraging and specific, never shame, and ground everything in the passage. Answer with JSON only. " +
+  `Every word the child will see or hear — questions, answers, feedback, hints — is written in ${tongue}. ` +
+  'The "kind" and "verdict" fields stay in English.';
 
 const flat = (words: string) =>
   words
@@ -23,12 +26,13 @@ export async function action({ request }: Route.ActionArgs) {
     const body = await guard(request);
     const passage = text(body.passage, 2000);
     const age = text(body.age, 10) || "6-10";
+    const tongue = tongueOf(text(body.language, 24)).name;
     if (!passage) throw new Error("No passage to talk about.");
 
     if (body.step === "questions") {
       const stumbled = texts(body.practiceWords, 30).slice(0, 8);
       const made = await askJson(
-        VOICE(age),
+        VOICE(age, tongue),
         `${stumbled.length ? `Words the child stumbled on: ${stumbled.join(", ")}.\n` : ""}` +
           "Write exactly 3 spoken questions about this passage: one 'recall' (what happened or who), one " +
           "'inference' (why, or how someone felt), one 'vocabulary' (what a word from the passage means, " +
@@ -62,7 +66,7 @@ export async function action({ request }: Route.ActionArgs) {
       const quote = text(body.quote, 300);
       if (!said) return { verdict: "not_yet", feedback: "I did not quite catch that. Try once more.", hint: "", quote };
       const made = await askJson(
-        VOICE(age),
+        VOICE(age, tongue),
         `Passage:\n${passage}\n\nQuestion: ${question}\nExpected answer: ${expected}\n` +
           `The child said (speech to text, small errors are fine): "${said}"\nAttempt ${attempt}. ` +
           "Judge meaning, not wording or spelling. Mark 'correct' for any answer the passage supports. " +
@@ -83,7 +87,7 @@ export async function action({ request }: Route.ActionArgs) {
 
     if (body.step === "praise") {
       const made = await askJson(
-        VOICE(age),
+        VOICE(age, tongue),
         `A child just read "${text(body.title, 80)}" out loud at ${count(body.wcpm, 0, 400, 0)} words a minute ` +
           `with ${count(body.accuracy, 0, 100, 0)}% accuracy and got ${count(body.right, 0, 3, 0)} of 3 questions right. ` +
           `${texts(body.practiceWords, 30).length ? `Words to practise: ${texts(body.practiceWords, 30).join(", ")}. ` : ""}` +

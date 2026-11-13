@@ -13,7 +13,8 @@ import { userOf } from "~/lib/auth.server";
 import { band, heartsNow } from "~/lib/kid";
 import { kidOf } from "~/lib/kid.server";
 import { readingPlace, score as grade, type Score } from "~/lib/scoring";
-import { hear, hush, say, sayAlong } from "~/lib/talk";
+import { tongueOf } from "~/lib/languages";
+import { hear, hush, say, sayAlong, speakIn } from "~/lib/talk";
 import type { Route } from "./+types/read";
 
 export const meta = () => [{ title: "Read · Reading Buddy" }];
@@ -53,6 +54,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
   const started = useRef(0);
   const asked = useRef(false);
 
+  useEffect(() => speakIn(tongueOf(kid.language).tag), [kid.language]);
   useEffect(() => () => mic.current?.stop(), []);
 
   const fetchStory = async (want: string) => {
@@ -70,7 +72,12 @@ export default function Read({ loaderData }: Route.ComponentProps) {
       setReport(null);
       setFigAt(undefined);
       asked.current = false;
-      post<{ questions: Question[] }>("/api/talk", { step: "questions", passage: made.passage, age: String(kid.age ?? 7) })
+      post<{ questions: Question[] }>("/api/talk", {
+        step: "questions",
+        passage: made.passage,
+        age: String(kid.age ?? 7),
+        language: kid.language,
+      })
         .then((made) => setQuestions(made.questions))
         .catch(() => setQuestions([]));
     } catch (problem) {
@@ -169,6 +176,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
     setBusy("judge");
     try {
       const made = await post<Verdict>("/api/talk", {
+        language: kid.language,
         step: "grade",
         passage: story.passage,
         question: question.question,
@@ -212,6 +220,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
     try {
       const comprehension = questions.length ? Math.round((right / questions.length) * 100) : 0;
       const praise = await post<{ said: string; notes: unknown[] }>("/api/talk", {
+        language: kid.language,
         step: "praise",
         passage: story.passage,
         title: story.title,
@@ -304,10 +313,11 @@ export default function Read({ loaderData }: Route.ComponentProps) {
             </div>
             {error && <p className="mt-3 text-center text-berry-ink">{error}</p>}
           </div>
-          <aside className="order-first w-full shrink-0 md:order-last md:sticky md:top-24 md:w-56">
-            <div className="overflow-hidden rounded-[22px] border-2 border-line">
-              <Scene seed={story.seed} place={story.place} width={224} height={300} alt={`${story.title}, drawn`} />
+          <aside className="order-first w-full shrink-0 md:order-last md:sticky md:top-24 md:w-60">
+            <div className="plate">
+              <Scene seed={story.seed} place={story.place} w={150} h={190} className="rounded-lg" alt={`${story.title}, drawn`} />
             </div>
+            <p className="mono mt-2 text-center text-muted">{story.place}</p>
           </aside>
         </main>
         <ActionBar>
@@ -372,8 +382,8 @@ export default function Read({ loaderData }: Route.ComponentProps) {
       <TopNav left={<span className="text-lg font-medium">{kid.name}</span>} right={<Crumbs kid={kid} />} />
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-6">
         <div className="mb-6 flex justify-center">
-          <div className="w-52">
-            <Cover title={story.title} by={story.by} seed={story.seed} place={story.place} />
+          <div className="w-60">
+            <Cover title={story.title} by={story.by} seed={story.seed} place={story.place} note="just read" />
           </div>
         </div>
         {result && <After title={story.title} score={result} report={report} again={() => setStage("pick")} home={() => go("/me")} />}

@@ -60,8 +60,12 @@ child's name on it. The same art animates beside the passage while they read.
 | `app/components/buddy.tsx` | Fig. One SVG, five moods: hi, listen, cheer, think, sad |
 | `app/components/chrome.tsx` | Top nav, bottom nav, hearts, stars, streak, the meter, the action bar |
 | `app/components/passage.tsx` | The story, word by word: read, missed, and the quote being cited |
-| `app/components/scene.tsx` | The scene beside the story: one painted SVG, drawn from the book's seed |
-| `app/components/cover.tsx` | A book: its painted scene, its title, and who it was read by |
+| `app/lib/pixel.ts` | The pixel canvas: OKLCH to sRGB, ramps, Bayer dither, cumulus and canopy brushes |
+| `app/lib/scenery.ts` | The six places, painted pixel by pixel, and Fig in them |
+| `app/lib/languages.ts` | Forty languages, their own names and their speech tags |
+| `app/components/scene.tsx` | The scene on a canvas, drawn once from the book's seed |
+| `app/components/cover.tsx` | A book: spine, letterpress title, chapter rule, the art, the byline |
+| `app/components/hero.tsx` | The opening: a wide pixel scene behind the first screen |
 | `app/components/voices.tsx` | Voice: female, male, every voice model and id, and cloning your own |
 | `legacy-python/` | The first Reading Buddy, FastAPI and Gutenberg. Kept for its scoring and prompts |
 
@@ -82,20 +86,32 @@ hard shadow a child can hit, and one job centred on the screen at a time.
 
 ## The scene
 
-Every story is painted beside it, and again on its cover: `app/components/scene.tsx` draws one SVG —
-no canvas, no wasm, no image to download. Six places (meadow, sea, space, forest, night, dawn) each
-carry their own palette in OKLCH and their own weather: layered washes of sky, soft hills or water or
-moon dust, pines or round trees, clouds, mist, stars, petals, birds, foam.
+Every story is painted beside it, and again on its cover. `app/lib/pixel.ts` is a small pixel canvas —
+OKLCH straight to sRGB, colour ramps, a 4×4 Bayer dither, and two brushes that do most of the work: a
+cumulus built from stacked discs (shadow, body, lit crown, rim) and a canopy built the same way.
+`app/lib/scenery.ts` composes the six places out of it: dithered skies that never band, rolling land
+with a lit crest, volumetric clouds, sun glitter on water, starfields, moon dust and craters, a
+textured trunk with an overhead canopy, and a silhouette fringe in the foreground so the frame has
+depth. Fig is drawn in the same pixels, planted on the ground with a contact shadow.
 
-It is illustration, not sprites. Edges are pulled off true by a `feDisplacementMap` over fractal noise
-so a hill looks brushed rather than plotted, a paper grain sits over the whole frame on `overlay`, and
-a soft vignette closes the corners. Fig stands in the middle distance in the same line as everywhere
-else in the app — the component imports `Buddy`, so he is never drawn twice.
+The seed comes from the child and the book, so a story always looks like itself: it places the sun,
+rolls the hills, stands the trees, scatters the stars and decides where Fig stands and how big he is.
+Nothing moves — it is a painting.
 
-The seed comes from the child and the book, so a story always looks like itself: it decides where the
-sun sits, how the hills roll, where the trees stand and where the stars are. Motion is CSS — clouds
-drift, trees sway, water rolls, fireflies float, Fig breathes — and `prefers-reduced-motion` or a book
-cover's `still` stops all of it.
+The frame and the book card are reverse-engineered from
+[cofounder.co](https://cofounder.co): the chapter plate is a two-pixel border with an eight-pixel mat
+around a rounded plate; the book is a cream card with a spine gradient down its left edge, a
+letterpress title over a hairline rule, an IBM Plex Mono chapter label, the art inset, and a mono
+footer carrying the byline and the reading.
+
+## Languages
+
+The language picker is forked from [otterspeak](https://github.com/brandonmlicea/otterspeak): forty
+languages, each shown in its own script with the English name beside it, as `option` buttons that hold
+their pressed state. It is not decoration — the choice runs through the whole product. The story is
+written in that language, the questions and Fig's replies come back in it, ElevenLabs switches to
+`eleven_multilingual_v2`, the browser listens with that BCP-47 tag, and the scorer normalises by
+Unicode letter rather than ASCII so accents and non-Latin scripts align.
 
 ## Voices
 

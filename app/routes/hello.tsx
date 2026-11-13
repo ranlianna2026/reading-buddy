@@ -4,19 +4,28 @@ import { useNavigate, useSearchParams } from "react-router";
 
 import { Buddy } from "~/components/buddy";
 import { Focus, Screen } from "~/components/chrome";
+import { Hero } from "~/components/hero";
 import { fields, post, send } from "~/lib/api";
 import { userOf } from "~/lib/auth.server";
 import { kidsOf } from "~/lib/kid.server";
+import { PLACES, seedOf } from "~/lib/scenery";
 import type { Route } from "./+types/hello";
 
 export const meta = () => [{ title: "Hello · Reading Buddy" }];
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await userOf(request);
-  return { signedIn: Boolean(user), kids: user ? (await kidsOf(user.id)).length : 0 };
+  const today = seedOf(new Date().toDateString());
+  return {
+    signedIn: Boolean(user),
+    kids: user ? (await kidsOf(user.id)).length : 0,
+    seed: today,
+    place: PLACES[today % PLACES.length],
+  };
 }
 
 export default function Hello({ loaderData }: Route.ComponentProps) {
+  const { seed, place } = loaderData;
   const [params] = useSearchParams();
   const go = useNavigate();
   const [step, setStep] = useState<"in" | "who">(loaderData.signedIn || params.has("who") ? "who" : "in");
@@ -69,12 +78,13 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
   if (step === "who") {
     return (
       <Screen id="page-who">
+        <Hero seed={seed} place={place} />
         <Focus intro={step}>
           <Buddy mood="hi" size={170} className="breathe" />
           <h1 className="text-4xl">Who is reading today?</h1>
           <p className="text-muted">Fig will remember them: what they love, and which words are still tricky.</p>
           <form
-            className="card flex w-full flex-col gap-4 p-6 text-left"
+            className="card flex w-full flex-col gap-4 bg-surface/92 p-6 text-left backdrop-blur-sm"
             onSubmit={(event) => {
               event.preventDefault();
               if (name.trim()) addKid();
@@ -120,12 +130,14 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
 
   return (
     <Screen id="page-hello">
+      <Hero seed={seed} place={place} />
       <Focus intro={mode}>
         <Buddy mood="hi" size={180} className="breathe" />
         <h1 className="text-4xl">Reading Buddy</h1>
+        <p className="mono text-muted">Chapter I · {place}</p>
         <p className="text-lg text-muted">Pick a story, read it out loud to Fig, then talk about it.</p>
         <form
-          className="card flex w-full flex-col gap-4 p-6 text-left"
+          className="card flex w-full flex-col gap-4 bg-surface/92 p-6 text-left backdrop-blur-sm"
           onSubmit={(event) => {
             event.preventDefault();
             withPassword();

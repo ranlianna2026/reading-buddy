@@ -2,6 +2,8 @@
 @import "@fontsource-variable/fredoka";
 @import "@fontsource/atkinson-hyperlegible/400.css";
 @import "@fontsource/atkinson-hyperlegible/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
 
 :root {
   color-scheme: light;
@@ -89,6 +91,7 @@
   --color-locked: var(--rb-locked);
   --font-sans: "Fredoka Variable", ui-rounded, "Segoe UI", system-ui, sans-serif;
   --font-story: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
   --text-story: var(--rb-story);
 }
 
@@ -179,6 +182,47 @@
     border-color: var(--rb-line);
     box-shadow: 0 10px 30px -18px var(--rb-shade);
   }
+  .book {
+    @apply flex overflow-hidden items-stretch rounded-l-sm rounded-r-xl bg-surface;
+    box-shadow:
+      inset 0 2px 1px 0 color-mix(in oklab, var(--rb-surface), white 70%),
+      0 0 0 1px color-mix(in oklab, var(--rb-ink) 10%, transparent),
+      0 4px 8px color-mix(in oklab, var(--rb-ink) 5%, transparent),
+      0 10px 10px color-mix(in oklab, var(--rb-ink) 4%, transparent);
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease;
+  }
+  .book-spine {
+    @apply flex-none w-3.5;
+    background: linear-gradient(
+      270deg,
+      color-mix(in oklab, var(--rb-ink) 14%, transparent) 0%,
+      color-mix(in oklab, var(--rb-ink) 7%, transparent) 55%,
+      color-mix(in oklab, var(--rb-ink) 2%, transparent) 100%
+    );
+  }
+  .shelf:hover .book {
+    transform: translateY(-6px);
+    box-shadow:
+      inset 0 2px 1px 0 color-mix(in oklab, var(--rb-surface), white 70%),
+      0 0 0 1px color-mix(in oklab, var(--rb-ink) 12%, transparent),
+      0 10px 16px color-mix(in oklab, var(--rb-ink) 8%, transparent),
+      0 20px 24px color-mix(in oklab, var(--rb-ink) 6%, transparent);
+  }
+  .plate {
+    @apply overflow-hidden p-2 border-2 rounded-xl;
+    border-color: var(--rb-line);
+    background: color-mix(in oklab, var(--rb-sunk) 70%, transparent);
+  }
+  .letterpress {
+    text-shadow:
+      0 0.5px 0.5px color-mix(in oklab, var(--rb-surface), white 60%),
+      0 0.3px 0.3px color-mix(in oklab, var(--rb-ink) 14%, transparent);
+  }
+  .mono {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+  }
   .bar {
     @apply h-4 overflow-hidden rounded-full;
     background: var(--rb-locked);
@@ -203,6 +247,19 @@
     border-left: 2px solid var(--rb-line);
     border-bottom: 2px solid var(--rb-line);
     transform: translateY(-50%) rotate(45deg);
+  }
+  .option {
+    @apply w-full rounded-2xl border-2 bg-surface px-4 py-3 text-left;
+    border-color: var(--rb-line);
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+  .option:hover:not(:disabled) {
+    border-color: var(--rb-leaf);
+  }
+  .option[aria-pressed="true"] {
+    border-color: var(--rb-leaf);
+    background: var(--rb-leaf-soft);
+    color: var(--rb-leaf-ink);
   }
   .tab {
     @apply inline-flex h-12 items-center gap-2 rounded-2xl px-4 font-medium text-muted;
@@ -367,7 +424,11 @@
   }
   .btn,
   .bar > span,
-  .story .w {
+  .story .w,
+  .book {
     transition: none;
+  }
+  .shelf:hover .book {
+    transform: none;
   }
 }

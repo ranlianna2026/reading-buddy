@@ -1,5 +1,6 @@
 import { count, Refusal, respond, text } from "~/lib/ai.server";
 import { userOf } from "~/lib/auth.server";
+import { tongueOf } from "~/lib/languages";
 import { env } from "cloudflare:workers";
 import { heartsNow, MAX_HEARTS, nextHeartIn } from "~/lib/kid";
 import { kidOf } from "~/lib/kid.server";
@@ -21,7 +22,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     const language = await env.DB.prepare("SELECT language FROM kids WHERE id = ?1").bind(kid.id).first<{ language: string }>();
     return {
       email: user.email,
-      kid: { id: kid.id, name: kid.name, age: kid.age, language: language?.language ?? "en" },
+      kid: { id: kid.id, name: kid.name, age: kid.age, language: tongueOf(language?.language).name },
       stats: {
         hearts: heartsNow(kid),
         maxHearts: MAX_HEARTS,
@@ -44,7 +45,7 @@ export async function action({ request }: Route.ActionArgs) {
     const body = (await request.json()) as Record<string, unknown>;
     const name = text(body.name, 40) || kid.name;
     const age = body.age === null ? null : count(body.age, 3, 14, kid.age ?? 7);
-    const language = text(body.language, 8) || "en";
+    const language = tongueOf(text(body.language, 24)).name;
     await env.DB.prepare("UPDATE kids SET name = ?2, age = ?3, language = ?4 WHERE id = ?1")
       .bind(kid.id, name, age, language)
       .run();
