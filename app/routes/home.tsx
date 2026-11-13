@@ -67,7 +67,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <ul className="flex flex-wrap gap-2">
             {readers.map((one) => (
               <li key={one.id}>
-                <button className="option flex items-center gap-2.5 py-2" aria-pressed={one.id === kid.id} onClick={() => pick(one.id)}>
+                <button className="chip" aria-pressed={one.id === kid.id} onClick={() => pick(one.id)}>
                   <Head size={30} />
                   <span className="font-medium">{one.name}</span>
                   <span className="mono text-muted">Level {one.level}</span>
@@ -75,14 +75,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               </li>
             ))}
             <li>
-              <button className="option py-2 font-medium" onClick={() => setAdding(!adding)}>
+              <button className="chip" onClick={() => setAdding(!adding)}>
                 + Add a reader
               </button>
             </li>
           </ul>
           {adding && (
             <form
-              className="card mt-3 flex flex-col gap-3 p-5"
+              className="panel mt-3 flex flex-col gap-3 p-5"
               onSubmit={(event) => {
                 event.preventDefault();
                 if (name.trim() && grade) void add();
@@ -94,11 +94,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 onChange={(event) => setName(event.target.value)}
                 maxLength={40}
                 placeholder="Their name"
-                className="h-14 rounded-2xl border-2 border-line bg-page px-4 text-lg outline-none focus:border-leaf"
+                className="h-14 rounded-2xl bg-sunk px-4 text-lg outline-none focus:bg-leaf-soft"
               />
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {GRADES.map((one) => (
-                  <button key={one.id} type="button" className="option text-center" aria-pressed={grade === one.id} onClick={() => setGrade(one.id)}>
+                  <button key={one.id} type="button" className="chip w-full justify-center text-center" aria-pressed={grade === one.id} onClick={() => setGrade(one.id)}>
                     <span className="block font-medium">{one.short}</span>
                     <span className="mono block text-muted">age {one.age}</span>
                   </button>
@@ -112,7 +112,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </section>
 
         <div className="mb-6 grid gap-4 md:grid-cols-[1fr_auto]">
-          <div className="card flex items-center gap-4 p-5">
+          <div className="panel flex items-center gap-4 p-5">
             <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-sunk text-2xl font-medium text-sun-ink">{me.level}</div>
             <div className="min-w-0">
               <p className="text-xl">{levelLabel(me.level)}</p>
@@ -136,13 +136,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </div>
 
         {speed.length > 1 && (
-          <section className="card mb-6 p-5">
+          <section className="panel mb-6 p-5">
             <h2 className="text-xl">My reading speed</h2>
+            <p className="mono text-muted">{speed[0]} → {speed[speed.length - 1]} words a minute</p>
             <Spark values={speed} />
           </section>
         )}
 
-        <section className="card p-5">
+        <section className="panel p-5">
           <h2 className="text-xl">My super powers</h2>
           <ul className="mt-3 grid gap-2 sm:grid-cols-3">
             {Object.entries(me.skills).map(([kind, pair]) => {
@@ -182,7 +183,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
 function Door({ to, title, note }: { to: string; title: string; note: string }) {
   return (
-    <Link to={to} className="card flex flex-col gap-1 p-6 hover:border-leaf">
+    <Link to={to} className="panel flex flex-col gap-1 p-6 transition-transform hover:-translate-y-0.5">
       <span className="text-xl">{title}</span>
       <span className="text-muted">{note}</span>
     </Link>
@@ -191,7 +192,7 @@ function Door({ to, title, note }: { to: string; title: string; note: string }) 
 
 function Tile({ icon, value, label }: { icon?: React.ReactNode; value: string | number; label: string }) {
   return (
-    <div className="card flex flex-col items-center gap-0.5 px-3 py-4">
+    <div className="panel flex flex-col items-center gap-0.5 px-3 py-4">
       {icon}
       <dd className="text-2xl font-medium">{value}</dd>
       <dt className="text-center text-xs text-muted">{label}</dt>
@@ -200,16 +201,16 @@ function Tile({ icon, value, label }: { icon?: React.ReactNode; value: string | 
 }
 
 function Spark({ values }: { values: number[] }) {
-  const w = 300;
-  const h = 46;
+  const w = 640;
+  const h = 90;
   const top = Math.max(...values) * 1.1 || 1;
   const step = w / (values.length - 1);
   const points = values.map((one, at) => `${(at * step).toFixed(1)},${(h - (one / top) * h).toFixed(1)}`).join(" ");
   return (
-    <svg viewBox={`0 -4 ${w} ${h + 8}`} width="100%" className="mt-2" role="img" aria-label="Words a minute over time">
+    <svg viewBox={`0 -6 ${w} ${h + 12}`} className="mt-2 w-full max-w-xl" role="img" aria-label="Words a minute over time">
       <polyline points={points} fill="none" stroke="var(--rb-leaf)" strokeWidth="3" strokeLinejoin="round" />
       {values.map((one, at) => (
-        <circle key={at} cx={at * step} cy={h - (one / top) * h} r="4" fill="var(--rb-leaf)" />
+        <circle key={at} cx={at * step} cy={h - (one / top) * h} r="5" fill="var(--rb-leaf)" />
       ))}
     </svg>
   );
