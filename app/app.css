@@ -261,7 +261,7 @@
   }
 }
 .blink {
-  transform-origin: 60px 48px;
+  transform-origin: 60px 46px;
   animation: blink 6s infinite;
 }
 @keyframes blink {

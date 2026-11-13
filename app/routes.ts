@@ -12,6 +12,7 @@ export default [
   route("api/story", "routes/api.story.ts"),
   route("api/talk", "routes/api.talk.ts"),
   route("api/speak", "routes/api.speak.ts"),
+  route("api/voices", "routes/api.voices.ts"),
   route("api/listen", "routes/api.listen.ts"),
   route("api/finish", "routes/api.finish.ts"),
 ] satisfies RouteConfig;

@@ -1,31 +1,7 @@
 import { env } from "cloudflare:workers";
 
 import { id } from "./auth.server";
-
-export const MAX_HEARTS = 5;
-export const REFILL = 20 * 60 * 1000;
-
-export type Kid = {
-  id: string;
-  name: string;
-  age: number | null;
-  hearts: number;
-  hearts_at: number;
-  streak: number;
-  streak_day: string | null;
-  stars: number;
-};
-
-export const day = (at = Date.now()) => new Date(at).toLocaleDateString("en-CA");
-
-export function heartsNow(kid: Kid) {
-  if (kid.hearts >= MAX_HEARTS) return MAX_HEARTS;
-  return Math.min(MAX_HEARTS, kid.hearts + Math.floor((Date.now() - kid.hearts_at) / REFILL));
-}
-
-export function nextHeartIn(kid: Kid) {
-  return heartsNow(kid) >= MAX_HEARTS ? 0 : REFILL - ((Date.now() - kid.hearts_at) % REFILL);
-}
+import { day, heartsNow, MAX_HEARTS, type Kid } from "./kid";
 
 export async function kidsOf(userId: string) {
   const rows = await env.DB.prepare(

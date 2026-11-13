@@ -9,7 +9,8 @@ import { Passage } from "~/components/passage";
 import { Idea, IDEAS } from "~/components/picks";
 import { post } from "~/lib/api";
 import { userOf } from "~/lib/auth.server";
-import { heartsNow, kidOf } from "~/lib/kid.server";
+import { band, heartsNow } from "~/lib/kid";
+import { kidOf } from "~/lib/kid.server";
 import { readingPlace, score as grade, type Score } from "~/lib/scoring";
 import { hear, hush, say, sayAlong } from "~/lib/talk";
 import type { Route } from "./+types/read";
@@ -383,4 +384,3 @@ export default function Read({ loaderData }: Route.ComponentProps) {
   );
 }
 
-const band = (age: number | null) => (!age ? 2 : age <= 5 ? 1 : age <= 6 ? 2 : age <= 7 ? 3 : age <= 8 ? 4 : 5);

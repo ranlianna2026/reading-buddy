@@ -2,7 +2,14 @@ import { env } from "cloudflare:workers";
 
 import { Refusal } from "./ai.server";
 
-const VOICE = () => env.VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
+export type Voice = { id: string; name: string; gender: string; kind: string; mine: boolean; preview: string };
+
+export const PICKS = {
+  female: { id: "cgSgspJ2msm6clMCkdW9", name: "Jessica" },
+  male: { id: "bIHbv24MWmeRgasZH58o", name: "Will" },
+} as const;
+
+const FALLBACK = (): string => env.VOICE_ID || PICKS.female.id;
 
 type Mood = "read" | "ask" | "cheer";
 
@@ -12,13 +19,35 @@ const SETTINGS: Record<Mood, Record<string, number | boolean>> = {
   read: { stability: 0.62, similarity_boost: 0.85, style: 0.15, use_speaker_boost: true },
 };
 
-async function voice(words: string, mood: Mood, path: string) {
+function key() {
   if (!env.ELEVENLABS_API_KEY) {
     throw new Refusal("No voice key yet. Put ELEVENLABS_API_KEY in .dev.vars (or run wrangler secret put ELEVENLABS_API_KEY).", 503);
   }
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE()}${path}?output_format=mp3_44100_128`, {
+  return env.ELEVENLABS_API_KEY;
+}
+
+export async function voices(): Promise<Voice[]> {
+  const res = await fetch("https://api.elevenlabs.io/v2/voices?page_size=100", { headers: { "xi-api-key": key() } });
+  if (!res.ok) throw new Refusal(`The voice list answered ${res.status}.`, 502);
+  const made = (await res.json()) as {
+    voices?: { voice_id: string; name: string; category?: string; labels?: Record<string, string>; preview_url?: string }[];
+  };
+  return (made.voices ?? [])
+    .map((voice) => ({
+      id: voice.voice_id,
+      name: voice.name.split(" - ")[0].split(" – ")[0].trim(),
+      gender: voice.labels?.gender ?? "neutral",
+      kind: voice.category ?? "premade",
+      mine: voice.category === "cloned" || voice.category === "generated",
+      preview: voice.preview_url ?? "",
+    }))
+    .sort((a, b) => Number(b.mine) - Number(a.mine) || a.name.localeCompare(b.name));
+}
+
+async function voice(words: string, mood: Mood, path: string, id: string) {
+  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${id}${path}?output_format=mp3_44100_128`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "xi-api-key": env.ELEVENLABS_API_KEY },
+    headers: { "Content-Type": "application/json", "xi-api-key": key() },
     body: JSON.stringify({
       text: words,
       model_id: env.VOICE_MODEL || "eleven_turbo_v2_5",
@@ -29,15 +58,15 @@ async function voice(words: string, mood: Mood, path: string) {
   return res;
 }
 
-export async function speak(words: string, mood: Mood = "read") {
-  const res = await voice(words, mood, "");
+export async function speak(words: string, mood: Mood = "read", id = FALLBACK()) {
+  const res = await voice(words, mood, "", id);
   return new Response(res.body, {
     headers: { "Content-Type": "audio/mpeg", "Cache-Control": "private, max-age=3600" },
   });
 }
 
-export async function speakAlong(words: string, mood: Mood = "read") {
-  const res = await voice(words, mood, "/with-timestamps");
+export async function speakAlong(words: string, mood: Mood = "read", id = FALLBACK()) {
+  const res = await voice(words, mood, "/with-timestamps", id);
   const made = (await res.json()) as {
     audio_base64?: string;
     alignment?: { characters?: string[]; character_start_times_seconds?: number[] };

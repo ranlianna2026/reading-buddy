@@ -4,6 +4,7 @@ import { useNavigate, useRevalidator } from "react-router";
 import { post } from "~/lib/api";
 import { readTheme, writeTheme, type Theme } from "~/lib/theme";
 import { Flame, Heart, Star } from "./icons";
+import { VoiceRow } from "./voices";
 
 type Settings = {
   email: string;
@@ -112,6 +113,10 @@ export function Progress({ onClose }: { onClose: () => void }) {
               <Cell value={data.stats.bestWcpm} label="best words a minute" />
               <Cell value={`${data.stats.accuracy}%`} label="read right" />
             </dl>
+
+            <Row label="Voice">
+              <VoiceRow />
+            </Row>
 
             <Row label="Theme">
               <Chips options={THEMES} now={theme} pick={pickTheme} />

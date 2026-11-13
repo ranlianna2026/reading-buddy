@@ -3,7 +3,8 @@ import { Link, redirect } from "react-router";
 import { Buddy } from "~/components/buddy";
 import { BottomNav, Crumbs, Screen, TopNav } from "~/components/chrome";
 import { userOf } from "~/lib/auth.server";
-import { heartsNow, kidOf } from "~/lib/kid.server";
+import { heartsNow } from "~/lib/kid";
+import { kidOf } from "~/lib/kid.server";
 import { history } from "~/lib/memory.server";
 import type { Route } from "./+types/library";
 

@@ -1,15 +1,16 @@
-import { count, respond, text } from "~/lib/ai.server";
+import { count, Refusal, respond, text } from "~/lib/ai.server";
 import { userOf } from "~/lib/auth.server";
 import { env } from "cloudflare:workers";
-import { heartsNow, kidOf, MAX_HEARTS, nextHeartIn } from "~/lib/kid.server";
+import { heartsNow, MAX_HEARTS, nextHeartIn } from "~/lib/kid";
+import { kidOf } from "~/lib/kid.server";
 import { history, recall } from "~/lib/memory.server";
 import type { Route } from "./+types/api.settings";
 
 async function mine(request: Request) {
   const user = await userOf(request);
-  if (!user) throw new Error("Sign in first.");
+  if (!user) throw new Refusal("Sign in first.", 401);
   const kid = await kidOf(user.id);
-  if (!kid) throw new Error("No reader yet.");
+  if (!kid) throw new Refusal("No reader yet.", 404);
   return { user, kid };
 }
 
