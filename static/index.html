@@ -163,6 +163,61 @@
   .langbar button { font-size:15px; padding:7px 14px; border-radius:20px; background:#fff; color:var(--ink); border:2px solid #efe3c9; box-shadow:0 3px 0 #efe3c9; }
   .langbar button.on { background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:0 3px 0 #4b3fc4; }
   .flag { font-size:18px; margin-left:6px; }
+  #parentbtn { margin-left:10px; }
+  .redraw { position:absolute; right:10px; top:8px; background:rgba(255,255,255,.92); color:var(--accent); border:2px solid #e3dfff;
+            box-shadow:none; font-size:13px; padding:5px 10px; border-radius:12px; }
+  .reasons { display:flex; gap:6px; flex-wrap:wrap; }
+  .reasons button { font-size:13px; padding:6px 11px; border-radius:14px; background:#fff; color:var(--ink); border:2px solid #f0e3c9; box-shadow:0 2px 0 #f0e3c9; }
+  .reasons button.on { background:var(--accent-soft); border-color:var(--accent-2); }
+  .page .pic .reasons { position:absolute; right:10px; top:42px; background:#fff; padding:8px; border-radius:14px; box-shadow:0 6px 20px rgba(0,0,0,.15); width:220px; }
+  .pop { position:absolute; z-index:60; background:#fff; border-radius:14px; padding:8px 10px; box-shadow:0 8px 24px rgba(40,30,80,.25); font-size:14px; font-weight:700; }
+  .pop button { font-size:14px; padding:7px 12px; margin-top:6px; }
+  .passage .misread, .passage .skipped { cursor:pointer; }
+  .fb { margin-top:16px; background:#fff; border:2px dashed #e9dcc0; border-radius:18px; padding:12px 14px; }
+  .fb .faces button { font-size:30px; background:none; box-shadow:none; padding:2px 8px; border:0; filter:grayscale(.4); }
+  .fb .faces button.on { filter:none; transform:scale(1.2); }
+  .fb .thumbs button { font-size:22px; padding:4px 12px; background:#fff; color:var(--ink); border:2px solid #f0e3c9; box-shadow:0 2px 0 #f0e3c9; }
+  .fb .thumbs button.on { background:var(--accent-soft); border-color:var(--accent-2); }
+  .appeal { background:#fff7e6 !important; color:#a35a00 !important; border-color:#ffd9a8 !important; box-shadow:0 3px 0 #ffd9a8 !important; }
+  .ritem { border:2px solid #f1eef9; border-radius:16px; padding:10px 12px; margin:8px 0; background:#fff; }
+  .ritem .meta { color:var(--muted); font-size:12.5px; font-weight:700; }
+  .ritem .btns { display:flex; gap:8px; margin-top:8px; }
+  .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:10px 0 6px; }
+  .kpis div { background:#fff; border:2px solid #f3e7cf; border-radius:14px; text-align:center; padding:8px; }
+  .kpis b { display:block; font-family:"Fredoka"; font-size:24px; color:var(--accent); } .kpis small { color:var(--muted); font-weight:700; font-size:12px; }
+  .steps { display:flex; align-items:center; gap:8px; justify-content:center; margin:8px 0 2px; font-weight:800; font-size:14px; color:#b7b2cf; }
+  .steps span { padding:5px 12px; border-radius:20px; background:#f6f3ff; }
+  .steps span.on { background:var(--accent); color:#fff; box-shadow:0 3px 0 #4b3fc4; }
+  .steps span.done { background:#e2f7ee; color:var(--good); }
+  .steps i { font-style:normal; }
+  .donebar { text-align:center; margin:12px 0 4px; }
+  .donebar .big { font-size:24px; padding:16px 40px; background:linear-gradient(135deg,#2ec4a0,#20a372); box-shadow:0 5px 0 #168a5f; animation: nudge 2.4s infinite; }
+  @keyframes nudge { 0%,85%,100% { transform:none; } 90% { transform:scale(1.05); } }
+  .hintline { color:var(--muted); font-weight:700; font-size:14px; margin-top:8px; }
+  .loadcard { text-align:center; padding:30px 10px; }
+  .loadcard .big-emoji { font-size:64px; animation: bob .6s infinite alternate; }
+  .loadcard h2 { font-family:"Fredoka"; font-size:28px; color:var(--ink); text-transform:none; letter-spacing:0; margin:12px 0 6px; }
+  #pcard { width:min(900px, 96vw); }
+  #pcard h3 { font-family:"Fredoka"; margin:18px 0 6px; }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin:6px 0 4px; }
+  .tabs button { background:#fff; color:var(--ink); border:2px solid #efe3c9; box-shadow:0 3px 0 #efe3c9; font-size:15px; padding:7px 14px; }
+  .tabs button.on { background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:0 3px 0 #4b3fc4; }
+  .levels { display:flex; gap:8px; flex-wrap:wrap; } .lvl { background:var(--accent-soft); border-radius:14px; padding:5px 12px; font-size:14px; }
+  .legend { display:flex; gap:16px; font-size:12.5px; color:var(--muted); font-weight:700; } .legend i { display:inline-block; width:12px; height:12px; border-radius:4px; margin-right:5px; vertical-align:-1px; }
+  .daytab { width:100%; border-collapse:collapse; font-size:13.5px; margin-top:10px; }
+  .daytab th { text-align:left; color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.05em; padding:6px; border-bottom:2px solid #f1eef9; }
+  .daytab td { padding:7px 6px; border-bottom:1px solid #f4f1fb; } .daytab td.bk { color:var(--muted); max-width:220px; }
+  .skillrow { font-size:14px; margin-top:8px; } .skillrow span { margin-left:10px; }
+  .fbline { font-size:14px; } .muted { color:var(--muted); } .empty-dash { text-align:center; color:var(--muted); font-weight:700; padding:20px; }
+  .kbadge { display:flex; align-items:center; gap:12px; background:linear-gradient(135deg,#6c5ce7,#a66cff); color:#fff; border-radius:22px; padding:14px 16px; box-shadow:0 5px 0 #4b3fc4; }
+  .kstar { font-size:40px; animation: bob 1.2s infinite alternate; } .klvl { font-family:"Fredoka"; font-size:26px; font-weight:700; line-height:1; } .kname { opacity:.9; font-weight:700; text-transform:capitalize; }
+  .ktiles { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0 4px; }
+  .ktiles div { background:#fff; border:2px solid #f3e7cf; box-shadow:0 3px 0 #f3e7cf; border-radius:16px; text-align:center; padding:8px 4px; }
+  .ktiles b { display:block; font-family:"Fredoka"; font-size:20px; } .ktiles small { color:var(--muted); font-weight:700; font-size:11.5px; }
+  .ksub { font-family:"Fredoka"; font-weight:600; color:#9a96b5; margin:14px 0 4px; font-size:15px; }
+  .kskill { display:flex; justify-content:space-between; align-items:center; background:#fff; border-radius:14px; padding:6px 10px; margin:5px 0; border:2px solid #f4f1fb; font-weight:700; }
+  .kstars { color:#ffb648; font-size:20px; letter-spacing:2px; }
+  .kwords .none { background:#f6f3ff !important; border-color:#ece6ff !important; color:var(--muted); cursor:default; }
   .writing { text-align:center; padding:60px 20px; }
   .writing .pen { font-size:64px; animation: bob .6s infinite alternate; }
   .writing .wstep { font-family:"Fredoka"; font-size:24px; font-weight:600; margin:18px 0; min-height:34px; animation: fade .4s; }
@@ -224,6 +279,7 @@
   <div class="logo">📚</div>
   <div><h1>Reading <span>Buddy</span></h1><div class="tag">Read aloud. Talk about it. Grow every day.</div></div>
   <label class="reader">👤 Reader <input type="text" id="learner" title="Who is reading?"></label>
+  <button class="ghost small" id="parentbtn" title="Feedback and review for grown-ups">👪 Parent</button>
 </header>
 <main>
   <section class="card">
@@ -265,6 +321,7 @@
           <button class="ghost small" id="newstory">📚 New story</button>
         </div>
       </div>
+      <div class="steps" id="steps"><span data-s="read">📖 Read</span><i>›</i><span data-s="quiz">❓ Questions</span><i>›</i><span data-s="report">⭐ Report</span></div>
       <div class="pagewrap">
         <button class="turn" id="prev" aria-label="previous page">◀</button>
         <div class="page">
@@ -274,25 +331,28 @@
         <button class="turn" id="next" aria-label="next page">▶</button>
       </div>
       <div class="dots" id="dots"></div>
+      <div class="donebar" id="donebar" hidden><button class="big" id="donebig">✅ I'm done reading!</button><div class="hintline">Tap when you finish, or just read to the end. I'll know! 🦉</div></div>
       <div class="src" id="src"></div>
     </div>
     <div class="book-title" id="loading"></div>
   </section>
   <aside class="card">
-    <h2>My progress</h2>
-    <div id="prog" style="color:var(--muted)">…</div>
+    <div id="prog">…</div>
+    <div id="thisread" hidden>
     <h2>This reading</h2>
     <div class="stats">
       <div class="stat"><b id="wcpm">–</b><small id="wcpmlabel">words / min</small></div>
       <div class="stat"><b id="acc">–</b><small>accuracy</small></div>
       <div class="stat"><b id="comp">–</b><small>understood</small></div>
     </div>
-    <h2>Words to practice</h2>
-    <div class="chips" id="practice"><span style="background:#f3f3f3;color:#999;cursor:default">none yet</span></div>
+    </div>
+    <div id="practice" hidden></div>
     <div id="qsec" hidden><div id="qs"></div></div>
     <div id="lsec" hidden><h2>Learn more</h2><div id="learn"></div></div>
   </aside>
 </main>
+<div class="overlay" id="parent" hidden><div class="qcard" id="pcard"></div></div>
+<div class="pop" id="wordpop" hidden></div>
 <div class="overlay" id="quiz" hidden>
   <div class="qcard" id="qcard"></div>
 </div>
@@ -323,18 +383,28 @@ function sparkline(vals){
   return `<svg width="100%" viewBox="0 -4 ${w} ${h + 8}" style="margin:6px 0"><polyline points="${pts}" fill="none" stroke="#5b5bd6" stroke-width="3" stroke-linejoin="round"/>`
        + vals.map((v, i) => `<circle cx="${i * step}" cy="${h - v / mx * h}" r="4" fill="#5b5bd6"/>`).join("") + `</svg>`;
 }
-function renderProfile(p){
+function renderProfile(p){                     // the child's own view: friendly, no tables (details are in 👪 Parent)
   S.profile = p; const h = p.history || [];
-  const skills = Object.entries(p.skills).map(([k, [c, t]]) => `<div class="skill"><span>${k}${p.focus === k ? " · practicing" : ""}</span><span>${t ? c + "/" + t : "–"}</span></div>`
-      + `<div class="bar"><i style="width:${t ? Math.round(100 * c / t) : 0}%"></i></div>`).join("");
-  $("#prog").innerHTML = `<span class="level">${p.level_label}</span>
-    <div style="margin-top:10px;font-size:13px">Words / min over ${h.length} session${h.length === 1 ? "" : "s"}${h.length ? `: <b style="color:var(--ink)">${h.map(x => x.wcpm).join(" → ")}</b>` : ""}</div>
-    ${sparkline(h.map(x => x.wcpm))}${skills}
-    <div style="font-size:13px;margin-top:4px">Practicing: ${p.practice.length ? p.practice.map(w => `<b style="color:#8a4b00">${w}</b>`).join(", ") : "–"}${p.mastered.length ? ` · mastered ⭐ ${p.mastered.length}` : ""}</div>`;
+  const days = new Set(h.map(x => new Date(x.ts * 1000).toDateString()));
+  let streak = 0; for (let d = new Date(); days.has(d.toDateString()); d.setDate(d.getDate() - 1)) streak++;
+  const names = { recall: "🔎 Remember", inference: "💭 Think", vocabulary: "📚 Words" };
+  const skills = Object.entries(p.skills).map(([k, [c, t]]) => { const v = t ? c / t : 0;
+    return `<div class="kskill"><span>${names[k] || k}</span><span class="kstars">${"★".repeat(Math.round(v * 3))}${"☆".repeat(3 - Math.round(v * 3))}</span></div>`; }).join("");
+  const sp = sparkline(h.filter(x => x.wcpm != null).map(x => x.wcpm));
+  $("#prog").innerHTML = `
+    <div class="kbadge"><div class="kstar">⭐</div><div><div class="klvl">Level ${p.level}</div><div class="kname">${(p.level_label || "").split("·")[1] || ""}</div></div></div>
+    <div class="ktiles"><div><b>🔥 ${streak}</b><small>day${streak === 1 ? "" : "s"} in a row</small></div><div><b>📚 ${new Set(h.map(x => x.title)).size}</b><small>stories read</small></div><div><b>⭐ ${p.mastered.length}</b><small>words learned</small></div></div>
+    ${sp ? `<div class="ksub">My reading speed 🚀</div>${sp}` : ""}
+    <div class="ksub">My super powers</div>${skills}
+    <div class="ksub">Words I'm learning</div>
+    <div class="chips kwords">${p.practice.length ? p.practice.slice(0, 6).map(w => `<span data-w="${w}">${w} 🔊</span>`).join("") : `<span class="none">Read a story to find some! ✨</span>`}</div>`;
+  document.querySelectorAll(".kwords span[data-w]").forEach(el => el.onclick = () => say(el.dataset.w, false, BL()));
 }
 loadProfile().then(() => { if (S.profile.history.length) $("#say").innerHTML = `Welcome back, ${LEARNER()}! 🌟 Want to <b>read a book</b>, or <b>make your own story</b>?`; });
 const post = (url, body) => fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ lang: BL(), ...body })})
   .then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.statusText); return j; });
+
+const fb = (kind, data = {}) => post("/api/feedback", { kind, data, learner: LEARNER(), title: S.book ? S.book.title : "" });
 
 // ---------- voice out ----------
 let VOICE = null; const VOICES = {};
@@ -418,7 +488,9 @@ function showPage(n){
   const drawnFromIdea = (S.book.via === "story" && !S.storyImgs.length) || (S.book.via !== "story" && S.book.via !== "muse-vision" && !S.pages.some(p => p.img));
   const label = drawnFromIdea ? (S.book.via === "story" ? "✨ drawn by Buddy from your idea" : "✨ drawn by Buddy") : S.book.via === "story" ? "✨ new picture · in your drawing style" : "✨ new picture · in the original style";
   $("#pagepic").innerHTML = img ? `<img src="${img}" alt="">` + (pg.gen ? `<span class="badge">${label}</span>` : "")
+                                 + (pg.pending ? "" : `<button class="redraw" id="redraw">🔄 Redraw</button>`)
                          : pg.pending ? `<div class="ph">🎨</div>` : "";
+  const rd = $("#redraw"); if (rd) rd.onclick = e => { e.stopPropagation(); pictureFeedback(n); };
   $("#pagepic").classList.toggle("drawing", !!pg.pending);
   $("#prev").disabled = n === 0; $("#next").disabled = n === S.pages.length - 1;
   const page = $(".page"); page.style.animation = "none"; page.offsetHeight; page.style.animation = "";
@@ -444,7 +516,7 @@ async function planPictures(){
   if ((b.via === "story" && !S.storyImgs.length) || noPictures) {
     // told only by voice/text: draw page 1 from scratch, then use it as the reference for every other page
     S.pages.forEach(p => p.pending = true); showPage(S.page);
-    const first = await drawPicture({ page_text: S.pages[0].text, title: b.title, kind: "new", cast });
+    const first = b.cover || await drawPicture({ page_text: S.pages[0].text, title: b.title, kind: "new", cast });
     if (S.bookToken !== token) return;
     if (!first) { S.pages.forEach(p => p.pending = false); showPage(S.page); return; }
     S.pages[0].gen = first; S.pages[0].pending = false; showPage(S.page);
@@ -463,6 +535,23 @@ async function planPictures(){
     if (S.bookToken === token && S.pages.indexOf(p) === S.page) showPage(S.page);
   }));
 }
+function pictureFeedback(n){
+  const box = document.createElement("div"); box.className = "reasons";
+  const R = { doesnt_match: "Doesn't match the story", looks_different: "Characters look different", scary: "Too scary", has_text: "Has words in it" };
+  box.innerHTML = Object.entries(R).map(([k, v]) => `<button data-r="${k}">${v}</button>`).join("");
+  $("#pagepic").appendChild(box);
+  box.querySelectorAll("button").forEach(b => b.onclick = async e => {
+    e.stopPropagation(); box.remove(); const pg = S.pages[n];
+    fb("picture", { page: n, reasons: [b.dataset.r], image_kind: pg.gen ? "generated" : "original" });
+    say("Thanks! Let me draw a new one.");
+    const first = S.pages.find(p => p.gen && p !== pg), ref = pg.ref || (pg.img && pg.img !== pg.gen ? pg.img : null) || (first && first.gen) || null;
+    const b0 = S.book, kind = b0.via !== "story" ? (pg.img ? "book" : "series") : S.storyImgs.length ? "story" : (ref ? "series" : "new");
+    pg.pending = true; showPage(n);
+    const img = await drawPicture({ page_text: pg.text, ref_image: ref || "", title: b0.title, kind, variant: String(Date.now()), avoid: R[b.dataset.r],
+      cast: b0.plan ? `${b0.plan.characters}. Setting: ${b0.plan.setting}` : "" });
+    pg.pending = false; if (img) pg.gen = img; if (S.page === n) showPage(n);
+  });
+}
 const pageOf = i => S.pages.findIndex(p => i >= p.start && i < p.end);
 $("#prev").onclick = () => { stopListen(); showPage(S.page - 1); };
 $("#next").onclick = () => { stopListen(); showPage(S.page + 1); };
@@ -473,6 +562,10 @@ function markReached(heard){       // live progress: greedy forward match of hea
     for (let k = i; k < Math.min(i + 4, ref.length); k++) if (ref[k] === h) { i = k + 1; break; } }
   spans.forEach((s, k) => s.classList.toggle("reached", k < i));
   const p = pageOf(Math.min(i, spans.length - 1)); if (p > S.page) showPage(p);
+  if (i >= spans.length - 2 && reader && reader.st.on && !S.autoDone) {        // reached the end: finish by itself
+    S.autoDone = setTimeout(() => { if (reader && reader.st.on) finishReading(); }, 3500);
+    $("#say").innerHTML = "All done? 🎉 Great reading! Let's see how you did…";
+  }
 }
 function highlightQuote(quote){
   document.querySelectorAll("#passage .quote").forEach(s => s.classList.remove("quote"));
@@ -531,11 +624,15 @@ function showBook(){
   }
   renderPassage(); resetSide();
   S.qsPromise = post("/api/questions", { passage: b.text, learner: LEARNER() });          // prepare questions while the child reads
-  $("#controls").innerHTML = `<button class="big rec" id="readbtn">Start reading 🎤</button>`;
-  $("#readbtn").onclick = beginReading;
+  $("#controls").innerHTML = `<button class="big rec" id="readbtn">🎤 Start reading</button><button class="ghost small" id="quizme" title="Questions without reading aloud">❓ Quiz me</button>`;
+  $("#readbtn").onclick = beginReading; $("#quizme").onclick = quizOnly; setStep("read"); $("#donebar").hidden = true; S.finishing = false;
   say(`Here it is! When you're ready, press <b>Start reading</b> and read the story out loud. I'm listening!`);
 }
-function resetSide(){ ["#wcpm","#acc","#comp"].forEach(s => $(s).textContent = "–");
+function setStep(step){
+  const order = ["read", "quiz", "report"], k = order.indexOf(step);
+  document.querySelectorAll("#steps span").forEach(e => { const j = order.indexOf(e.dataset.s); e.className = j < k ? "done" : j === k ? "on" : ""; });
+}
+function resetSide(){ ["#wcpm","#acc","#comp"].forEach(s => $(s).textContent = "–"); $("#thisread").hidden = true;
   $("#qsec").hidden = true; $("#lsec").hidden = true; document.querySelectorAll(".change").forEach(e => e.remove());
   $("#practice").innerHTML = `<span style="background:#f3f3f3;color:#999;cursor:default">none yet</span>`;
   $("#qs").innerHTML = ""; $("#learn").textContent = "A fun fact from the web, found with Keenable."; }
@@ -543,25 +640,42 @@ function beginReading(){
   if (!SR) return alert("Please use Chrome for speech recognition.");
   stopListen(); showPage(0); $("#say").innerHTML = "I'm listening… read at your own pace. The page turns by itself! 📖";
   startReading(t => { $("#heard").textContent = "🎤 " + t.split(" ").slice(-12).join(" "); markReached(t); });
-  $("#controls").innerHTML = `<button class="big" id="donebtn">I'm done! ✅</button>`;
-  $("#donebtn").onclick = finishReading;
+  $("#controls").innerHTML = `<button class="big" id="donebtn">✅ I'm done</button>`;
+  $("#donebtn").onclick = finishReading; $("#donebar").hidden = false; $("#donebig").onclick = finishReading; S.autoDone = null;
 }
+function loadCard(title, sub = ""){ return `<div class="loadcard"><div class="big-emoji">🦉</div><h2>${title}</h2><div style="color:var(--muted);font-weight:700">${sub}</div><div style="margin-top:14px"><span class="spinner"></span></div></div>`; }
 async function finishReading(){
+  if (S.finishing) return; S.finishing = true; clearTimeout(S.autoDone);
   const { transcript, seconds } = stopReading(); $("#heard").textContent = "";
-  $("#controls").innerHTML = `<span class="spinner"></span>`;
-  const s = S.score = await post("/api/score", { passage: S.book.text, transcript, seconds }); showPage(0);
+  $("#controls").innerHTML = ""; $("#donebar").hidden = true; setStep("quiz");
+  $("#quiz").hidden = false; $("#qcard").innerHTML = loadCard("⭐ Great reading!", "Getting your questions ready…");
+  S.lastRead = { transcript, seconds };
+  const s = S.score = await post("/api/score", { passage: S.book.text, transcript, seconds, learner: LEARNER() }); showPage(0);
   document.querySelectorAll("#passage span").forEach((el, i) => { el.classList.remove("reached");
     const st = s.status[i]; if (st === "misread" || st === "skipped") { el.classList.add(st);
-      const m = s.miscues.find(m => m.index === i); el.title = m && m.said ? `you said "${m.said}"` : "skipped"; } });
-  $("#wcpm").textContent = s.wcpm; $("#acc").textContent = Math.round(s.accuracy * 100) + "%"; $("#wcpmlabel").textContent = UNIT() + " / min";
+      const m = s.miscues.find(m => m.index === i); el.title = m && m.said ? `you said "${m.said}"` : "skipped";
+      if (m && m.said) el.onclick = () => wordFeedback(el, m); } });
+  $("#wcpm").textContent = s.wcpm; $("#acc").textContent = Math.round(s.accuracy * 100) + "%"; $("#wcpmlabel").textContent = UNIT() + " / min"; $("#thisread").hidden = false;
   $("#practice").innerHTML = s.practice_words.length ? s.practice_words.map(w => `<span title="hear it">${w} 🔊</span>`).join("")
                                                     : `<span style="background:var(--good-soft);color:var(--good)">none, great job! ⭐</span>`;
   document.querySelectorAll("#practice span").forEach(el => el.onclick = () => say(el.textContent.replace(" 🔊",""), false, BL()));
   const praise = s.accuracy >= 0.95 ? "Wow, super smooth reading!" : s.accuracy >= 0.85 ? "Nice reading!" : "Good effort! Reading out loud takes practice.";
-  await say(`${praise} You read <b>${s.words_correct} ${UNIT()}</b> correctly, about <b>${s.wcpm} ${UNIT()} a minute</b>.`
-            + (s.practice_words.length ? ` Let's practice <b>${s.practice_words.slice(0,3).join(", ")}</b> later.` : ""));
-  await say("Now let's talk about the story!");
+  $("#qcard").innerHTML = loadCard(praise, `You read ${s.words_correct} ${UNIT()} · ${s.wcpm} ${UNIT()} a minute · ${Math.round(s.accuracy * 100)}% right. Questions coming…`);
+  await say(`${praise} Now let's talk about the story!`);
   askQuestions();
+}
+function wordFeedback(el, m){
+  const pop = $("#wordpop"), r = el.getBoundingClientRect();
+  pop.innerHTML = `Buddy heard “${m.said}”<br><button id="wordok">✅ I read it right</button>`;
+  pop.style.left = (r.left + scrollX) + "px"; pop.style.top = (r.bottom + scrollY + 6) + "px"; pop.hidden = false;
+  setTimeout(() => document.addEventListener("click", function off(e){ if (!pop.contains(e.target)) { pop.hidden = true; document.removeEventListener("click", off); } }), 0);
+  $("#wordok").onclick = async () => {
+    pop.hidden = true; el.classList.remove("misread"); el.title = ""; el.onclick = null;
+    await fb("word", { expected: m.expected, said: m.said });
+    const s = S.score = await post("/api/score", { passage: S.book.text, transcript: S.lastRead.transcript, seconds: S.lastRead.seconds, learner: LEARNER() });
+    $("#wcpm").textContent = s.wcpm; $("#acc").textContent = Math.round(s.accuracy * 100) + "%";
+    say("Got it! I'll remember how you say that word.");
+  };
 }
 const KIND = { recall: "🔎 Remember", inference: "💭 Think", vocabulary: "📚 Word" };
 function burst(){ const b = document.createElement("div"); b.className = "burst";
@@ -591,8 +705,9 @@ function quizCard(i, n, q){
     <div class="qheard" id="qheard"></div>
     <div class="qsay" id="qsaybox" hidden><span class="em" id="qem">🦉</span><span id="qsay"></span></div>
     <div id="qproof"></div>
-    <div class="qactions"><button class="ghost small" id="qagain">🔁 Hear it again</button><button class="ghost small" id="qskip">Skip ›</button></div>`;
+    <div class="qactions"><span><button class="ghost small" id="qagain">🔁 Hear it again</button> <button class="ghost small" id="qhint">💡 Hint</button></span><button class="ghost small" id="qskip">Skip ›</button></div>`;
   $("#qagain").onclick = () => { speechSynthesis.cancel(); say(q.question, false, BL()); };
+  $("#qhint").onclick = () => { $("#qproof").innerHTML = proofHTML(q.quote).replace("📖 From the story", "💡 Look here in the story"); say("Look at this part of the story!"); };
   $("#qskip").onclick = () => { S.skipQ = true; speechSynthesis.cancel(); S.abortListen && S.abortListen(); };
 }
 function pickByVoice(said, q){
@@ -619,11 +734,22 @@ function choose(q){                                  // resolves with the option
 }
 function buddySays(text, mood){ const box = $("#qsaybox"); if (!box) return; box.hidden = false; box.className = "qsay " + (mood || "");
   $("#qem").textContent = mood === "correct" ? "⭐" : mood === "miss" ? "💡" : mood === "reread" ? "📖" : "🦉"; }
+async function quizOnly(){                       // she only listened: questions without read-aloud scoring
+  stopListen(); S.score = null; S.finishing = true; setStep("quiz"); $("#controls").innerHTML = "";
+  $("#quiz").hidden = false; $("#qcard").innerHTML = loadCard("❓ Quiz time!", "Getting your questions ready…"); askQuestions();
+}
 async function askQuestions(){
-  $("#controls").innerHTML = `<span class="spinner"></span> getting questions ready…`;
-  const { questions, learn_topic } = await S.qsPromise; S.questions = questions; S.learnTopic = learn_topic;
+  let qd = null;
+  for (let t = 0; t < 2 && !(qd && qd.questions && qd.questions.length); t++) {
+    try { qd = await (t === 0 && S.qsPromise ? S.qsPromise : post("/api/questions", { passage: S.book.text, learner: LEARNER() })); } catch (e) { qd = null; }
+  }
+  if (!qd) {
+    $("#qcard").innerHTML = `<div class="loadcard"><div class="big-emoji">🙈</div><h2>Oops, my questions got lost!</h2><button class="big" id="qretry" style="margin-top:12px">🔁 Try again</button></div>`;
+    $("#qretry").onclick = () => { S.qsPromise = null; $("#qcard").innerHTML = loadCard("❓ One more try…"); askQuestions(); }; return;
+  }
+  const { questions, learn_topic } = qd; S.questions = questions; S.learnTopic = learn_topic;
   const learnP = learn_topic ? post("/api/learn", { topic: learn_topic, title: S.book.title }).catch(() => null) : Promise.resolve(null);
-  $("#controls").innerHTML = ""; $("#quiz").hidden = false;
+  $("#quiz").hidden = false;
   let right = 0; S.answers = [];
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i]; quizCard(i, questions.length, q); S.skipQ = false; S.silent = 0;
@@ -661,6 +787,21 @@ async function askQuestions(){
       else if (action === "reread_retry") { buddySays("", "reread"); $("#qproof").innerHTML = proofHTML(g.quote); await say(g.feedback, true, L); if (g.quote) await say(g.quote, false, L); }
       else if (action === "hint_retry") { buddySays("", "miss"); $("#qproof").innerHTML = ""; await say(g.feedback + (g.hint ? " " + g.hint : ""), true, L); }
       else { buddySays("", "miss"); $("#qproof").innerHTML = proofHTML(g.quote); await say(g.feedback, true, L); }
+      S.lastAnswer = answer;
+      if (action === "explain_move_on" && verdict !== "correct" && !S.skipQ) {
+        // the child can disagree: a careful second opinion; disputed answers go to the parent's review queue
+        const choice = await new Promise(res => {
+          $(".qactions").innerHTML = `<button class="ghost small appeal" id="qappeal">🙋 I think I was right!</button><button class="ghost small" id="qnext">Next ›</button>`;
+          $("#qappeal").onclick = () => res("appeal"); $("#qnext").onclick = () => res("next"); setTimeout(() => res("next"), 9000);
+        });
+        if (choice === "appeal") {
+          buddySays(); say("Okay, let me read the story again carefully…");
+          const g2 = await post("/api/appeal", { passage: S.book.text, question: q, answer, verdict_before: verdict, learner: LEARNER(), title: S.book.title });
+          if (g2.verdict === "correct") { verdict = "correct"; buddySays("", "correct"); burst(); }
+          $("#qproof").innerHTML = proofHTML(g2.quote); await say(g2.feedback, true, BL()); await new Promise(r => setTimeout(r, 900));
+        }
+        break;
+      }
       if (action === "praise_move_on" || action === "explain_move_on") { await new Promise(r => setTimeout(r, 900)); break; }
       $("#qheard").textContent = ""; $("#qheard").classList.remove("has");
     }
@@ -671,33 +812,107 @@ async function askQuestions(){
   $("#comp").textContent = `${right}/${questions.length}`;
   $("#qcard").innerHTML = `<div class="rhead"><div class="stars">${"⭐".repeat(Math.max(1, right))}${"☆".repeat(questions.length - right)}</div><h2>Putting your report card together…</h2><span class="spinner"></span></div>`;
   const [learn, sess] = await Promise.all([learnP,
-    post("/api/session", { learner: LEARNER(), title: S.book.title, source: S.book.via, score: S.score, answers: S.answers })]);
+    post("/api/session", { learner: LEARNER(), title: S.book.title, source: S.book.via, score: S.score || {}, answers: S.answers })]);
   renderProfile(sess.profile); reportCard(right, questions.length, learn, sess);
 }
 async function reportCard(right, n, learn, sess){
-  const s = S.score, ch = sess.change, up = ch.level_to > ch.level_from, down = ch.level_to < ch.level_from;
+  setStep("report");
+  const s = S.score || { wcpm: "–", accuracy: NaN }, ch = sess.change, up = ch.level_to > ch.level_from, down = ch.level_to < ch.level_from;
   const head = right === n ? `Amazing reading, ${LEARNER()}!` : right > 0 ? `Great job, ${LEARNER()}!` : `Good try, ${LEARNER()}!`;
   const next = S.book.parts > S.book.part + 1, practice = sess.profile.practice.slice(0, 3);
   $("#qcard").innerHTML = `
     <div class="rhead"><div class="stars">${"⭐".repeat(right)}${"☆".repeat(n - right)}</div><h2>${head}</h2>
       <div style="color:var(--muted);font-weight:700">${S.book.title}</div></div>
-    <div class="rstats"><div><b>${s.wcpm}</b><small>${UNIT()} / minute</small></div><div><b>${Math.round(s.accuracy * 100)}%</b><small>read correctly</small></div><div><b>${right}/${n}</b><small>questions understood</small></div></div>
+    <div class="rstats"><div><b>${s.wcpm}</b><small>${UNIT()} / minute</small></div><div><b>${isNaN(s.accuracy) ? "👂" : Math.round(s.accuracy * 100) + "%"}</b><small>${isNaN(s.accuracy) ? "listened" : "read correctly"}</small></div><div><b>${right}/${n}</b><small>questions understood</small></div></div>
     <div class="change">${up ? "🎉 <b>Level up!</b> " : down ? "🌱 " : "👍 "}Level ${ch.level_from} → ${ch.level_to}: ${ch.why}.${ch.mastered.length ? `<br>⭐ Mastered: <b>${ch.mastered.join(", ")}</b>` : ""}</div>
     ${practice.length ? `<div class="rrow">📝 Words to practice (tap to hear): <span class="chips">${practice.map(w => `<span>${w} 🔊</span>`).join("")}</span><br><small style="color:var(--muted)">Your next story will use them!</small></div>` : ""}
     ${learn ? `<div class="rrow"><div class="learn">🌍 <b>Fun fact about ${learn.topic}:</b> ${learn.fact}<br><a href="${learn.source_url}" target="_blank">source: ${learn.source_title}</a></div></div>` : ""}
+    <div class="fb" id="fbbox">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><b>How was it?</b>
+        <span class="faces">${[["happy","😀"],["ok","😐"],["sad","😟"]].map(([k,e]) => `<button data-mood="${k}">${e}</button>`).join("")}</span>
+        <span style="margin-left:auto"><b>This story:</b> <span class="thumbs"><button data-r="up">👍</button> <button data-r="down">👎</button></span></span></div>
+      <div class="reasons" id="fbreasons" style="margin-top:8px" hidden>${[["too_hard","Too hard"],["too_easy","Too easy"],["boring","Boring"],["scary","Too scary"],["wrong_language","Wrong language"],["loved_it","Loved it!"]].map(([k,v]) => `<button data-k="${k}">${v}</button>`).join("")}</div>
+      <div id="fbthanks" style="color:var(--good);font-weight:800;margin-top:6px"></div>
+    </div>
     <div class="rbtns"><button class="big" id="nextstory">✨ Make my next story</button>
       ${next ? `<button class="ghost" id="nextbtn">Read the next part ➡️</button>` : ""}<button class="ghost" id="againbtn">🔁 Read it again</button>
       <button class="ghost" id="closerep">Close</button></div>`;
   if (right === n) burst();
+  const topic = S.book.via === "story" ? (S.idea || (S.book.plan && S.book.plan.characters) || S.book.title) : S.book.title;
+  let rating = null; const reasons = new Set();
+  const sendStory = async () => { const r = await fb("story", { rating, reasons: [...reasons], topic, level: S.profile.level, via: S.book.via });
+    renderProfile(r.profile); $("#fbthanks").textContent = "Thanks! I'll remember that 💜"; };
+  document.querySelectorAll("#fbbox .faces button").forEach(b => b.onclick = () => {
+    document.querySelectorAll("#fbbox .faces button").forEach(x => x.classList.toggle("on", x === b)); fb("session", { mood: b.dataset.mood }); $("#fbthanks").textContent = "Thanks! 💜"; });
+  document.querySelectorAll("#fbbox .thumbs button").forEach(b => b.onclick = () => {
+    rating = b.dataset.r; document.querySelectorAll("#fbbox .thumbs button").forEach(x => x.classList.toggle("on", x === b));
+    $("#fbreasons").hidden = false; sendStory(); });
+  document.querySelectorAll("#fbreasons button").forEach(b => b.onclick = () => { b.classList.toggle("on"); b.classList.contains("on") ? reasons.add(b.dataset.k) : reasons.delete(b.dataset.k); sendStory(); });
   document.querySelectorAll(".rrow .chips span").forEach(el => el.onclick = () => say(el.textContent.replace(" 🔊",""), false, BL()));
   const close = () => { $("#quiz").hidden = true; speechSynthesis.cancel(); };
-  $("#nextstory").onclick = () => { close(); makeStory(true); };
+  $("#nextstory").onclick = () => { close(); freshStory(); };
   if (next) $("#nextbtn").onclick = async () => { close(); $("#controls").innerHTML = `<span class="spinner"></span>`;
     S.book = await post("/api/book", { title: S.book.title, part: S.book.part + 1, lang: BL() }); showBook(); };
   $("#againbtn").onclick = () => { close(); showBook(); };
-  $("#closerep").onclick = () => { close(); $("#controls").innerHTML = `<button class="big" id="nextstory2">✨ Next story</button>`; $("#nextstory2").onclick = () => makeStory(true); };
+  $("#closerep").onclick = () => { close(); $("#controls").innerHTML = `<button class="big" id="nextstory2">✨ Next story</button>`; $("#nextstory2").onclick = freshStory; };
   await say(`${head} ${up ? `You moved up to level ${ch.level_to}! ` : ""}`, false); if (learn) await say(learn.fact, false, BL());
 }
+
+// ---------- 👪 parent: feedback summary + review queue (confirmed items become regression tests) ----------
+function dayChart(days){                      // bars = words per minute, dots = understanding, per day
+  const ds = days.slice(-14), W = 640, H = 170, bw = Math.min(36, (W - 40) / Math.max(1, ds.length) - 8);
+  const mx = Math.max(60, ...ds.map(d => d.wcpm || 0)) * 1.15, x = i => 30 + i * ((W - 40) / Math.max(1, ds.length));
+  const bars = ds.map((d, i) => d.wcpm == null ? "" : `<rect x="${x(i)}" y="${H - 28 - (d.wcpm / mx) * (H - 50)}" width="${bw}" height="${(d.wcpm / mx) * (H - 50)}" rx="6" fill="#a29bfe"><title>${d.day}: ${d.wcpm} wpm</title></rect>
+      <text x="${x(i) + bw / 2}" y="${H - 32 - (d.wcpm / mx) * (H - 50)}" text-anchor="middle" font-size="11" font-weight="800" fill="#6c5ce7">${d.wcpm}</text>`).join("");
+  const pts = ds.map((d, i) => d.comprehension == null ? null : [x(i) + bw / 2, 20 + (1 - d.comprehension) * (H - 60)]).filter(Boolean);
+  const line = pts.length > 1 ? `<polyline points="${pts.map(p => p.join(",")).join(" ")}" fill="none" stroke="#2ec4a0" stroke-width="3" stroke-dasharray="6 4"/>` : "";
+  const dots = pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="#2ec4a0"/>`).join("");
+  const labels = ds.map((d, i) => `<text x="${x(i) + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#9a96b5">${d.day.slice(5).replace("-", "/")}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%">${bars}${line}${dots}${labels}</svg>
+    <div class="legend"><span><i style="background:#a29bfe"></i>words per minute</span><span><i style="background:#2ec4a0"></i>understanding (higher is better)</span></div>`;
+}
+async function openParent(childIdx = 0){
+  const d = await fetch("/api/parent").then(r => r.json()), kids = d.children, sum = d.feedback, queue = d.review;
+  const k = kids[childIdx] || null;
+  const pct = v => v == null ? "–" : Math.round(v * 100) + "%";
+  const kidHTML = !k ? `<div class="empty-dash">No reading sessions yet. Once your child reads with Buddy, their daily progress shows here.<br>
+      <button class="ghost small" id="sample" style="margin-top:10px">📊 Load sample data (made-up "Sample Kid")</button></div>` : `
+    <div class="kpis"><div><b>🔥 ${k.totals.streak}</b><small>day streak</small></div><div><b>${k.totals.minutes}</b><small>minutes read</small></div>
+      <div><b>${k.totals.books}</b><small>stories &amp; books</small></div><div><b>⭐ ${k.totals.mastered}</b><small>words mastered</small></div></div>
+    <div class="levels">${Object.entries(k.langs).map(([lg, v]) => `<span class="lvl">${LANGS[lg]?.label || lg} · <b>${v.label}</b></span>`).join("")}</div>
+    <h3>📈 Progress by day</h3>${k.days.length ? dayChart(k.days) : "<div class='muted'>No sessions yet.</div>"}
+    <table class="daytab"><tr><th>Day</th><th>Sessions</th><th>Minutes</th><th>Words/min</th><th>Accuracy</th><th>Understood</th><th>Stories</th><th>Mastered</th></tr>
+      ${k.days.slice().reverse().slice(0, 14).map(x => `<tr><td><b>${new Date(x.day + "T12:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</b></td>
+        <td>${x.sessions}</td><td>${x.minutes}</td><td>${x.wcpm ?? "👂"}</td><td>${pct(x.accuracy)}</td><td>${pct(x.comprehension)}</td>
+        <td class="bk">${x.books.join(", ")}</td><td>${x.mastered.join(", ") || "–"}</td></tr>`).join("")}</table>
+    ${Object.entries(k.langs).map(([lg, v]) => `<div class="skillrow"><b>${LANGS[lg]?.label || lg}</b> skills:
+      ${Object.entries(v.skills).map(([s2, [c, t]]) => `<span>${s2} <b>${t ? Math.round(100 * c / t) + "%" : "–"}</b></span>`).join("")}
+      · practicing: <b>${v.practice.join(", ") || "–"}</b>${v.likes.length ? ` · loves stories about <b>${v.likes.join(", ")}</b>` : ""}</div>`).join("")}`;
+  const st = sum.story, top = Object.entries(st.reasons).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([kk, v]) => `${kk.replace("_", " ")} (${v})`).join(", ") || "–";
+  $("#pcard").innerHTML = `
+    <div class="rhead"><h2>👪 Parent dashboard</h2></div>
+    <div class="tabs">${kids.map((c, i) => `<button class="${i === childIdx ? "on" : ""}" data-k="${i}">👤 ${c.name}</button>`).join("")}</div>
+    ${kidHTML}
+    <h3>💬 Feedback from reading</h3>
+    <div class="fbline">Stories liked <b>${st.up}/${st.up + st.down}</b> · appeals won <b>${sum.appeals.overturned}/${sum.appeals.total}</b> · words fixed <b>${sum.words}</b> · top issues: ${top}</div>
+    <h3>✅ Needs your check (${queue.length})</h3>
+    ${queue.length ? queue.slice().reverse().map(e => e.kind === "appeal" ? `
+      <div class="ritem"><div class="meta">🙋 ${e.learner} disagreed · ${e.title}</div>
+        <div><b>Q:</b> ${e.question.question}</div><div><b>Answer:</b> “${e.answer}”</div>
+        <div class="meta">Buddy: ${e.verdict_before} → second opinion: ${e.verdict_after} · expected: ${e.question.expected_answer}</div>
+        <div class="btns"><button class="ghost small" data-id="${e.id}" data-l="correct">✅ Child was right</button><button class="ghost small" data-id="${e.id}" data-l="incorrect">❌ Not right</button></div></div>` : `
+      <div class="ritem"><div class="meta">🔤 ${e.learner} said they read a word right · ${e.title}</div>
+        <div>Word: <b>${e.expected}</b> · Buddy heard: “${e.said}”</div>
+        <div class="btns"><button class="ghost small" data-id="${e.id}" data-l="correct">✅ Read right</button><button class="ghost small" data-id="${e.id}" data-l="incorrect">❌ Reading mistake</button></div></div>`).join("")
+      : `<div class="muted">Nothing to check right now. 🎉</div>`}
+    <div class="rbtns"><button class="ghost" id="pclose">Close</button></div>`;
+  $("#parent").hidden = false;
+  document.querySelectorAll("#pcard .tabs button").forEach(b => b.onclick = () => openParent(+b.dataset.k));
+  document.querySelectorAll("#pcard [data-id]").forEach(b => b.onclick = async () => { await post("/api/review", { id_ref: b.dataset.id, label: b.dataset.l }); openParent(childIdx); });
+  const sb = $("#sample"); if (sb) sb.onclick = async () => { await post("/api/parent/sample", {}); openParent(0); };
+  $("#pclose").onclick = () => { $("#parent").hidden = true; };
+}
+$("#parentbtn").onclick = openParent;
 
 // ---------- make my own story ----------
 const fileToUrl = f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); });
@@ -723,6 +938,14 @@ async function makeStory(sequel = false){
   S.book = j; showBook();
 }
 $("#makestory").onclick = () => { S.idea = ""; makeStory(false); };
+function freshStory(){                 // a brand-new story (not a sequel); her practice words are woven in automatically
+  stopListen(); S.book = null; S.storyFiles = []; S.storyImgs = []; S.idea = ""; $("#thumbs").innerHTML = ""; $("#idea").value = "";
+  $("#book").hidden = true; $("#chooser").hidden = false; $("#langbar").hidden = false; $("#controls").innerHTML = ""; loadProfile();
+  const pw = (S.profile && S.profile.practice.slice(0, 3)) || [];
+  say("What should your next story be about? Draw a picture or tell me your idea!" + (pw.length ? ` I'll put your practice words in it: <b>${pw.join(", ")}</b>.` : ""));
+  document.querySelector(".choice.make").scrollIntoView({ behavior: "smooth", block: "center" });
+  document.querySelector(".choice.make").animate([{ boxShadow: "0 0 0 0 #a66cff" }, { boxShadow: "0 0 0 10px #a66cff55" }, { boxShadow: "0 0 0 0 #a66cff" }], { duration: 1200 });
+}
 
 // ---------- entry points ----------
 $("#start").onclick = async () => {

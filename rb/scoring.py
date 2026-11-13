@@ -35,7 +35,9 @@ were what when where which who will with you your one two all any some very woul
 over under down off went came come here been them three four five six seven eight nine ten""".split())
 
 
-def score(passage, transcript, seconds, lang="en"):
+def score(passage, transcript, seconds, lang="en", accepted=None):
+    """accepted: {expected word: [things speech recognition hears for this child]} from 'I read that right' feedback."""
+    accepted = accepted or {}
     disp = words(passage, lang)
     ref = [norm(w) for w in disp]
     keep = [i for i, w in enumerate(ref) if w]          # skip pure-punctuation tokens
@@ -61,7 +63,7 @@ def score(passage, transcript, seconds, lang="en"):
             said = hyp[j1:j2]
             for k, i in enumerate(range(i1, min(i2, reached))):
                 s = said[k] if k < len(said) else None
-                if s is not None and _close(ref_n[i], s):
+                if s is not None and (_close(ref_n[i], s) or s in accepted.get(ref_n[i], ())):
                     status[keep[i]] = "correct"
                 elif s is None:
                     status[keep[i]] = "skipped"

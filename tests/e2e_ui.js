@@ -52,14 +52,15 @@
     ok("A9 reading scored, miscues marked", document.querySelectorAll("#passage .misread, #passage .skipped").length >= 2,
        `${S.score.wcpm} wpm, ${Math.round(S.score.accuracy * 100)}%`);
     ok("A10 quiz pop-up opens", await until(() => !$("#quiz").hidden, 30000));
-    ok("A11 3 questions, mixed formats", S.questions.length === 3 && S.questions.some(q => q.format === "choice") && S.questions.some(q => q.format === "open"),
+    const want = S.profile.level <= 2 ? ["choice", "choice", "choice"] : null;
+    ok("A11 3 questions, formats fit her level", S.questions.length === 3 && (want ? S.questions.every(q => q.format === "choice") : S.questions.some(q => q.format === "open")),
        S.questions.map(q => `${q.kind}:${q.format}`).join(", "));
     await until(() => document.querySelector(".opt.wrong"), 20000);
     ok("A12 wrong tap greyed out + proof shown", !!document.querySelector(".opt.wrong") && await until(() => $("#qproof")?.innerHTML.includes("From the story"), 8000));
     ok("A13 right tap turns green", await until(() => document.querySelector(".opt.right"), 15000));
     ok("A14 report card appears", await until(() => $("#qcard")?.innerText.includes("words / minute"), 120000));
     ok("A15 all questions answered", S.answers.length === 3, S.answers.map(a => `${a.kind}:${a.verdict}`).join(", "));
-    ok("A16 open question retried then correct", S.answers.find(a => a.kind === "inference")?.verdict === "correct");
+    ok("A16 inference answered correctly", S.answers.find(a => a.kind === "inference")?.verdict === "correct");
     ok("A17 session saved to profile", S.profile.history.length === sessions0 + 1, `level ${lvl0} → ${S.profile.level}`);
     ok("A18 fun fact with source on report", !!$("#qcard .learn a"), $("#qcard .learn a")?.href);
     $("#closerep").click(); await sleep(300);

@@ -7,6 +7,8 @@
 4. Code checks length, sentence length and that the practice words are really there; one retry with the
    failures fed back (same loop as a design fix: the model proposes, code verifies).
 """
+from concurrent.futures import ThreadPoolExecutor
+
 from . import lang as L
 from .books import ksearch
 from .learner import check_story, spec_for
@@ -34,11 +36,18 @@ SYSTEM = ("You are a children's author who writes warm, funny, age-appropriate s
 FACTS = {"en": "facts for kids", "es": "datos para niños", "fr": "pour les enfants", "zh": "儿童 知识"}
 
 
-def create_story(images, idea, level, practice_words=(), lang="en"):
+def create_story(images, idea, level, practice_words=(), lang="en", prefs=None):
     spec = spec_for(level, lang)
     lname = L.get(lang)["name"] + (" — Simplified characters only" if lang == "zh" else "")
     plan = chat_json(SYSTEM, f"A child made these pictures and said this idea out loud: \"{idea or '(no idea given)'}\". "
                      "Plan a story from them.", PLAN, "plan", images=images)
+    # no drawing from the child: start the cover picture now, in parallel with writing the story (~15 s saved)
+    cover = None
+    if not images:
+        from .illustrate import illustrate
+        cast = f"{plan.get('characters', '')}. Setting: {plan.get('setting', '')}"
+        cover = ThreadPoolExecutor(max_workers=1).submit(
+            illustrate, f"The opening scene: {plan.get('what_happens') or idea}", None, idea or "a children's story", "new", cast)
     facts = []
     if plan.get("real_world_topic") and plan.get("search_query"):
         try:
@@ -53,6 +62,8 @@ def create_story(images, idea, level, practice_words=(), lang="en"):
            "simple words a child at this level can decode, 2-4 short pages. Use the child's pictures for the pages.\n"
            + (f"Weave in each of these practice words naturally, at least once (any grammatical form is fine, e.g. "
               f"'whispered'; keep every sentence grammatical): {', '.join(practice_words)}.\n" if practice_words else "")
+           + (f"The child enjoyed stories about: {', '.join(prefs['liked'])}. " if prefs and prefs.get("liked") else "")
+           + (f"Avoid: {', '.join(prefs['avoid'])}. " if prefs and prefs.get("avoid") else "")
            + f"If they fit, include 1-2 TRUE facts from these search results and list their indexes:\n{fact_txt}")
     feedback = ""
     for attempt in range(2):
@@ -67,6 +78,12 @@ def create_story(images, idea, level, practice_words=(), lang="en"):
                     + (f"its longest sentence had {check['longest_sentence']} {unit}, max is {spec['max_sentence']}. " if not check["sentence_ok"] else "")
                     + (f"it is missing these practice words: {', '.join(check['practice_missing'])}." if check["practice_missing"] else ""))
     used = [facts[i] for i in st.get("facts_used", []) if 0 <= i < len(facts)]
-    return {"title": st["title"], "text": text, "pages": st["pages"], "via": "story", "part": 0, "parts": 1,
+    cover_img = None
+    if cover:
+        try:
+            cover_img = cover.result(timeout=40)
+        except Exception:
+            cover_img = None              # the page can still draw it later
+    return {"cover": cover_img, "title": st["title"], "text": text, "pages": st["pages"], "via": "story", "part": 0, "parts": 1,
             "source": "story", "level": level, "check": check, "attempts": attempt + 1, "plan": plan, "lang": lang,
             "facts": [{"title": f.title, "url": f.url} for f in used]}

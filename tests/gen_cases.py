@@ -107,7 +107,7 @@ def model_tests():
         ck = st["check"]
         check(lang, "story written in the right language", ck["language_ok"], st["title"])
         check(lang, "story fits its level", ck["word_count_ok"] and ck["sentence_ok"], f"{ck['word_count']} {ck['unit']}")
-        qj = c.post("/api/questions", json={"passage": st["text"], "lang": lang}).json()
+        qj = c.post("/api/questions", json={"passage": st["text"], "lang": lang, "learner": "gen-l3"}).json()   # level 3: mixed formats
         qs = qj["questions"]
         check(lang, "exactly 3 questions", len(qs) == 3, str([q["kind"] for q in qs]))
         check(lang, "mixed formats (choice + open)", {q["format"] for q in qs} == {"choice", "open"}, str([q["format"] for q in qs]))

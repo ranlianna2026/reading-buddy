@@ -68,7 +68,10 @@ def record_session(name, book_title, source, score, answers, read_words=(), lang
     prof["mastered"] = (prof["mastered"] + newly_mastered)[-50:]
 
     old = prof["level"]
-    if acc >= 0.95 and comp >= 2 / 3 and score.get("finished", True):
+    read_aloud = bool(score.get("words_attempted"))
+    if not read_aloud:                      # only listened + answered: reading level is not judged
+        why = "listening practice, so your reading level stays the same"
+    elif acc >= 0.95 and comp >= 2 / 3 and score.get("finished", True):
         prof["level"] = min(5, old + 1)
         why = "accurate reading and good understanding"
     elif acc < 0.90 or (answers and comp < 1 / 3):
@@ -76,9 +79,12 @@ def record_session(name, book_title, source, score, answers, read_words=(), lang
         why = "this one was hard, so the next story will be a little easier"
     else:
         why = "just right, so we'll stay here for more practice"
-    prof["history"].append({"ts": int(time.time()), "title": book_title, "source": source, "wcpm": wcpm,
-                            "accuracy": acc, "comprehension": round(comp, 2), "level": old})
-    prof["history"] = prof["history"][-30:]
+    prof["history"].append({"ts": int(time.time()), "title": book_title, "source": source, "wcpm": wcpm if read_aloud else None,
+                            "accuracy": acc if read_aloud else None, "comprehension": round(comp, 2), "level": old,
+                            "seconds": score.get("seconds", 0), "words_read": score.get("words_correct", 0),
+                            "questions": len(answers), "right": right, "read_aloud": read_aloud,
+                            "unit": score.get("unit", "words"), "mastered": newly_mastered})
+    prof["history"] = prof["history"][-200:]
     save(prof)
     return prof, {"level_from": old, "level_to": prof["level"], "why": why, "mastered": newly_mastered,
                   "new_practice": [w for w in sorted(missed)]}
@@ -106,3 +112,86 @@ def check_story(text, level, practice_words, lang="en"):
             "longest_sentence": longest, "sentence_ok": longest <= spec["max_sentence"] + 2,
             "language_ok": L.detect_script_ok(text, lang),
             "practice_used": used, "practice_missing": [w for w in practice_words if w not in used]}
+
+
+def all_children():
+    """Parent dashboard: every child, every language, with a day-by-day rollup of their sessions."""
+    import datetime as dt
+    kids = {}
+    for p in sorted(DIR.glob("*.json")):
+        prof = json.loads(p.read_text())
+        name, lang = prof.get("name", p.stem), prof.get("lang", "en")
+        if name.lower().startswith(("e2e", "gen-", "fb-", "fbui", "test", "uitest", "speedtest", "ideatest", "langtest")):
+            continue                                                     # skip automated-test learners
+        kid = kids.setdefault(name.lower(), {"name": name, "langs": {}, "days": {}, "totals": {
+            "sessions": 0, "minutes": 0.0, "books": set(), "mastered": 0}})
+        kid["langs"][lang] = {"level": prof["level"], "label": LEVELS[prof["level"]]["label"], "practice": prof["practice"][:6],
+                              "skills": prof["skills"], "mastered": len(prof.get("mastered", [])),
+                              "likes": prof.get("prefs", {}).get("liked", [])}
+        for h in prof["history"]:
+            day = dt.datetime.fromtimestamp(h["ts"]).strftime("%Y-%m-%d")
+            d = kid["days"].setdefault(day, {"day": day, "sessions": 0, "minutes": 0.0, "books": [], "wcpm": [], "accuracy": [],
+                                             "comprehension": [], "mastered": [], "langs": set()})
+            d["sessions"] += 1
+            d["minutes"] += (h.get("seconds") or 0) / 60
+            if h["title"] not in d["books"]:
+                d["books"].append(h["title"])
+            if h.get("wcpm") is not None:
+                d["wcpm"].append(h["wcpm"]); d["accuracy"].append(h["accuracy"])
+            d["comprehension"].append(h.get("comprehension", 0))
+            d["mastered"] += h.get("mastered", [])
+            d["langs"].add(lang)
+            t = kid["totals"]; t["sessions"] += 1; t["minutes"] += (h.get("seconds") or 0) / 60; t["books"].add(h["title"])
+        kid["totals"]["mastered"] += len(prof.get("mastered", []))
+    avg = lambda xs: round(sum(xs) / len(xs), 2) if xs else None
+    out = []
+    for kid in kids.values():
+        days = []
+        for d in sorted(kid["days"].values(), key=lambda d: d["day"]):
+            days.append({"day": d["day"], "sessions": d["sessions"], "minutes": round(d["minutes"], 1), "books": d["books"],
+                         "wcpm": round(avg(d["wcpm"])) if d["wcpm"] else None, "accuracy": avg(d["accuracy"]),
+                         "comprehension": avg(d["comprehension"]), "mastered": d["mastered"], "langs": sorted(d["langs"])})
+        t = kid["totals"]
+        streak, today = 0, dt.date.today()
+        have = {d["day"] for d in days}
+        while (today - dt.timedelta(days=streak)).strftime("%Y-%m-%d") in have:
+            streak += 1
+        out.append({"name": kid["name"], "langs": kid["langs"], "days": days,
+                    "totals": {"sessions": t["sessions"], "minutes": round(t["minutes"], 1), "books": len(t["books"]),
+                               "mastered": t["mastered"], "streak": streak}})
+    return out
+
+
+def make_samples():
+    """Two sample kids (clearly named 'Sample ...') for demoing the parent dashboard."""
+    make_sample("Sample Mia", seed=4)
+    make_sample("Sample Leo", seed=9, base=48, level=2)
+    make_sample("Sample Leo", seed=11, base=40, level=1, lang="es",
+                books=["La zorra y las uvas", "Nubecita y el Trueno", "Tuga quiere volar"])
+
+
+def make_sample(name="Sample Kid", seed=4, base=62, level=3, lang="en", books=None):
+    """Two weeks of made-up practice for demoing the parent dashboard (clearly named 'Sample Kid')."""
+    import random
+    rng = random.Random(seed)
+    books = books or ["The Tale of Peter Rabbit", "Tilly Wants to Fly", "The Velveteen Rabbit", "Ollie Swims Down", "La zorra y las uvas",
+             "The Fox and the Grapes", "Pip Hears the Rumble", "Shy Ollie Says Hi"]
+    prof = {"name": name, "lang": lang, "level": level, "practice": ["whisper", "bravely", "garden"], "mastered": ["octopus", "scared",
+            "breath", "famished", "trellised", "parsley"], "skills": {"recall": [17, 19], "inference": [11, 17], "vocabulary": [14, 18]},
+            "history": [], "prefs": {"liked": ["octopus", "space"], "avoid": [], "level_nudge": 0}, "sample": True}
+    now = int(time.time())
+    for d in range(13, -1, -1):
+        if d in (9, 4):
+            continue                                            # a couple of days off
+        for k in range(rng.choice([1, 1, 2])):
+            if lang != "en" and d % 3:
+                continue                                        # second language: fewer sessions
+            wcpm = int(base + (13 - d) * 2.4 + rng.uniform(-5, 5))
+            prof["history"].append({"ts": now - d * 86400 - k * 3600, "title": rng.choice(books), "source": "story",
+                                    "wcpm": wcpm, "accuracy": round(min(0.99, 0.86 + (13 - d) * 0.008 + rng.uniform(-0.02, 0.02)), 3),
+                                    "comprehension": rng.choice([0.67, 1.0, 1.0, 0.67, 0.33]), "level": max(1, level - 1) if d > 7 else level,
+                                    "seconds": rng.randint(150, 420), "words_read": rng.randint(80, 160), "questions": 3,
+                                    "right": 2, "read_aloud": True, "unit": "words",
+                                    "mastered": [rng.choice(prof["mastered"])] if rng.random() < 0.3 else []})
+    save(prof)
+    return prof
