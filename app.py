@@ -127,3 +127,19 @@ def session(req: SessionReq):
                if s == "correct"]
     prof, change = learner.record_session(req.learner, req.title, req.source, req.score, req.answers, read_ok)
     return {"profile": _profile_view(prof), "change": change}
+
+
+class IllustrateReq(BaseModel):
+    page_text: str
+    ref_image: str          # the book's own illustration URL, or the child's drawing as a data URL
+    title: str = ""
+    kind: str = "book"      # "book" or "story"
+
+
+@app.post("/api/illustrate")
+def make_picture(req: IllustrateReq):
+    from rb import illustrate
+    try:
+        return {"image": illustrate.illustrate(req.page_text, req.ref_image, req.title, req.kind)}
+    except Exception as e:  # a missing picture should never break reading
+        raise HTTPException(502, f"could not draw a picture: {str(e)[:200]}")

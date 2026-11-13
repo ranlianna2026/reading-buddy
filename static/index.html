@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Reading Buddy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
   :root { --ink:#1f2340; --muted:#6b7090; --bg:#fff8ec; --card:#fff; --accent:#5b5bd6; --accent-soft:#ececff;
           --good:#1f9d63; --good-soft:#e3f6ec; --warn:#e07b00; --warn-soft:#fff1dc; --skip:#9aa0b8; --quote:#fff3a6; }
@@ -20,7 +22,7 @@
   .buddy .face { font-size:44px; line-height:1; transition: transform .2s; }
   .buddy.talking .face { animation: bob .5s infinite alternate; }
   @keyframes bob { to { transform: translateY(-4px) rotate(-4deg); } }
-  .bubble { background:var(--accent-soft); border-radius:18px; padding:14px 18px; font-size:20px; flex:1; min-height:56px; }
+  .bubble { background:var(--accent-soft); border-radius:18px; padding:12px 16px; font-size:18px; flex:1; min-height:48px; }
   .heard { color:var(--muted); font-size:16px; min-height:22px; margin:6px 0 0 58px; font-style:italic; }
   .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
   button { font: inherit; font-size:17px; border:0; border-radius:16px; padding:12px 20px; cursor:pointer;
@@ -68,13 +70,19 @@
   .tools { display:flex; gap:8px; }
   button.small { font-size:15px; padding:8px 14px; border-radius:14px; }
   .pagewrap { display:flex; align-items:stretch; gap:10px; margin-top:10px; }
-  .page { flex:1; background:#fffdf7; border-radius:22px; border:2px solid #f1e4c8; overflow:hidden; min-height:380px;
+  .page { flex:1; background:#fffdf7; border-radius:22px; border:2px solid #f1e4c8; overflow:hidden; min-height:0;
           display:flex; flex-direction:column; box-shadow: inset 0 0 0 6px #fff; animation: flip .35s ease; }
   @keyframes flip { from { opacity:0; transform: translateX(14px); } to { opacity:1; transform:none; } }
-  .page .pic { height:230px; background:#eef5ff; display:flex; align-items:center; justify-content:center; font-size:90px; }
+  .page .pic { height:clamp(150px, 27vh, 260px); background:#eef5ff; display:flex; align-items:center; justify-content:center; font-size:90px; }
   .page .pic img { height:100%; width:100%; object-fit:contain; background:#eef5ff; }
   .page .pic:empty { display:none; }
-  .page .passage { padding:22px 28px; font-size:31px; line-height:1.7; flex:1; display:flex; align-items:center; }
+  .page .pic { position:relative; }
+  .page .pic .badge { position:absolute; left:10px; bottom:8px; background:rgba(255,255,255,.92); color:var(--accent);
+                      font-size:12.5px; font-weight:700; padding:4px 10px; border-radius:12px; }
+  .page .pic.drawing::after { content:"✨ drawing a new picture…"; position:absolute; right:10px; bottom:8px; background:rgba(91,91,214,.9);
+                      color:#fff; font-size:12.5px; font-weight:700; padding:4px 10px; border-radius:12px; animation: pulse 1.2s infinite alternate; }
+  @keyframes pulse { to { opacity:.55; } }
+  .page .passage { padding:16px 26px; font-size:clamp(21px, 3.1vh, 30px); line-height:1.6; flex:1; display:flex; align-items:center; }
   .page .passage > div { width:100%; }
   .turn { background:#fff; color:var(--accent); border:2px solid var(--accent-soft); font-size:26px; padding:0 14px; border-radius:18px; }
   .turn:disabled { visibility:hidden; }
@@ -83,47 +91,119 @@
   .dots span.on { background:var(--accent); width:26px; border-radius:6px; }
   .passage span.speaking { background:#d9e6ff; box-shadow:0 0 0 2px #b9cdfc; }
   .src { text-align:center; }
+  .choices { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:6px; }
+  .choice { background:#fffdf7; border:2px solid #f1e4c8; border-radius:22px; padding:18px 20px; }
+  .choice.make { background:linear-gradient(135deg,#fff3fb,#eef0ff); border-color:#e6e0ff; }
+  .choice h3 { margin:0 0 4px; font-size:22px; } .choice p { margin:0 0 14px; color:var(--muted); font-size:15px; }
+  .choice input[type=text] { min-width:0; flex:1; }
+  .picks { margin-top:10px; } .lbl { cursor:pointer; color:var(--accent); font-weight:600; display:inline-block; }
+  label.ghost.small { background:#fff; border:2px solid var(--accent-soft); }
+  .tools #controls { display:contents; }
+  .tools button.big { font-size:16px; padding:9px 16px; border-radius:14px; }
+  .reader { margin-left:auto; background:#fff; border:1px solid #eee2c8; border-radius:20px; padding:4px 6px 4px 12px; font-size:14px; color:var(--muted); display:flex; gap:8px; align-items:center; }
+  .reader input { border:0; background:var(--bg); border-radius:14px; padding:6px 10px; font-size:15px; width:110px; min-width:0; font-weight:600; color:var(--ink); }
+  footer { text-align:center; color:var(--muted); font-size:12px; padding:0 20px 18px; }
   .spinner { display:inline-block; width:16px; height:16px; border:3px solid #ccd; border-top-color:var(--accent); border-radius:50%; animation: spin 1s linear infinite; vertical-align:-2px; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  [hidden] { display:none !important; }
+  /* ---------- polish ---------- */
+  :root { --ink:#2a2550; --muted:#7b7899; --bg:#fff7ea; --accent:#6c5ce7; --accent-2:#a29bfe; --accent-soft:#efedff;
+          --sun:#ffb648; --mint:#2ec4a0; --good:#20a372; --good-soft:#e2f7ee; --warn:#f08a24; --warn-soft:#fff0dd; --quote:#fff1a8; }
+  body { font-family:"Nunito", "Avenir Next", system-ui, sans-serif; color:var(--ink);
+         background: radial-gradient(circle at 8% 12%, #ffe9c7 0, transparent 28%), radial-gradient(circle at 92% 6%, #e8e4ff 0, transparent 30%),
+                     radial-gradient(circle at 85% 90%, #dff7ef 0, transparent 30%), var(--bg); min-height:100vh; }
+  h1, h2, h3, .choice h3, .book-title b, .level, .stat b { font-family:"Fredoka", "Nunito", sans-serif; }
+  header { padding:18px 30px 10px; }
+  header .logo { width:52px; height:52px; border-radius:16px; background:linear-gradient(135deg,var(--sun),#ff7eb6); display:grid; place-items:center;
+                 font-size:28px; box-shadow:0 6px 0 #e79a2e33, 0 8px 18px #ff9f4333; }
+  header h1 { font-size:28px; letter-spacing:.2px; } header h1 span { color:var(--accent); }
+  .card { border-radius:28px; box-shadow:0 1px 0 #fff inset, 0 10px 30px rgba(80,60,20,.07), 0 2px 0 #f2e3c6; border:1px solid #f6ead2; }
+  main { grid-template-columns: minmax(0,1fr) 340px; }
+  .buddy .face { width:58px; height:58px; border-radius:50%; background:linear-gradient(135deg,#fff3d6,#ffe0a3); display:grid; place-items:center;
+                 font-size:36px; box-shadow:0 4px 0 #f3c97a; flex:none; }
+  .bubble { position:relative; background:#fff; border:2px solid var(--accent-soft); box-shadow:0 4px 0 var(--accent-soft); font-weight:600; }
+  .bubble::before { content:""; position:absolute; left:-11px; top:18px; border:10px solid transparent; border-right-color:var(--accent-soft); border-left:0; }
+  .bubble::after { content:""; position:absolute; left:-7px; top:20px; border:8px solid transparent; border-right-color:#fff; border-left:0; }
+  .heard { margin-left:72px; }
+  button { font-family:"Nunito", sans-serif; font-weight:800; background:var(--accent); box-shadow:0 4px 0 #4b3fc4; transition:transform .08s, box-shadow .08s; }
+  button:hover:not(:disabled) { transform:translateY(-1px); }
+  button:active:not(:disabled) { transform:translateY(3px); box-shadow:0 1px 0 #4b3fc4; }
+  button.rec { background:#ff5d73; box-shadow:0 4px 0 #d63d55; }
+  button.ghost, label.ghost.small { background:#fff; color:var(--accent); border:2px solid #e3dfff; box-shadow:0 3px 0 #e3dfff; }
+  label.ghost.small { padding:8px 14px; border-radius:14px; font-size:15px; }
+  #makestory { background:linear-gradient(135deg,#ff7eb6,#a66cff); box-shadow:0 4px 0 #8a4fd6; width:100%; }
+  #start { width:100%; }
+  input[type=text] { border:2px solid #efe3c9; background:#fff; font-family:"Nunito", sans-serif; font-weight:600; }
+  input[type=text]:focus { outline:none; border-color:var(--accent-2); box-shadow:0 0 0 4px var(--accent-soft); }
+  .choice { box-shadow:0 4px 0 #f1e4c8; transition:transform .15s; } .choice:hover { transform:translateY(-2px); }
+  .choice.make { box-shadow:0 4px 0 #e6e0ff; }
+  .thumbs img { height:54px; }
+  .page { background: linear-gradient(90deg, #f6ecd6 0, #fffdf8 18px) ; border:2px solid #efdfbd; box-shadow:0 6px 0 #efdfbd, inset 0 0 0 6px #fffdf8; }
+  .page .pic { background:linear-gradient(180deg,#eef6ff,#f8fbff); }
+  .page .passage { font-family:"Andika", "Nunito", sans-serif; color:#2a2550; letter-spacing:.3px; word-spacing:2px; }
+  .turn { box-shadow:0 3px 0 #e3dfff; } .turn:hover { background:var(--accent-soft); }
+  .dots span.on { background:var(--accent); }
+  .book-title b { font-size:22px; }
+  .src { font-size:12.5px; margin-top:8px; }
+  h2 { font-family:"Fredoka", sans-serif; font-weight:600; font-size:14px; letter-spacing:.1em; color:#9a96b5; }
+  .level { background:linear-gradient(135deg,var(--accent),#a66cff); box-shadow:0 3px 0 #4b3fc4; font-weight:600; }
+  .stat { background:#fff; border:2px solid #f3e7cf; box-shadow:0 3px 0 #f3e7cf; border-radius:18px; }
+  .stat b { color:var(--accent); }
+  .bar { height:12px; background:#f1eef9; } .bar i { background:linear-gradient(90deg,var(--mint),#7ee0b8); border-radius:6px; }
+  .chips span { background:var(--warn-soft); border:2px solid #ffd9a8; }
+  .q { background:#fff; border:2px solid #f1eef9; } .q.correct { border-color:#bfe9d6; } .q.partly, .q.not_yet { border-color:#ffd9a8; }
+  .learn { background:linear-gradient(135deg,#e9f6ff,#f2ecff); border:2px solid #dfe8ff; }
+  .change { background:linear-gradient(135deg,#e2f7ee,#fff7d6); border:2px solid #c6ecd9; font-weight:600; }
+  .passage .misread { background:#ffe7c7; border-bottom:3px solid var(--warn); }
+  .passage .reached { background:#dcf6ea; }
+  .passage span.speaking { background:#ffe58a; box-shadow:0 0 0 3px #ffe58a; }
+  @media (max-width: 1100px) { main { grid-template-columns:1fr; } .choices { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
 <header>
   <div class="logo">📚</div>
-  <div><h1>Reading Buddy</h1><div class="tag">Read aloud. Talk about it. Grow every day.</div></div>
-  <div class="powered" style="display:flex;gap:8px;align-items:center">👤 <input type="text" id="learner" title="Reader name"> · Muse Spark · Keenable · speech in your browser</div>
+  <div><h1>Reading <span>Buddy</span></h1><div class="tag">Read aloud. Talk about it. Grow every day.</div></div>
+  <label class="reader">👤 Reader <input type="text" id="learner" title="Who is reading?"></label>
 </header>
 <main>
   <section class="card">
-    <div class="buddy" id="buddy"><div class="face">🦉</div><div class="bubble" id="say">Hi! Press <b>Let's read!</b> to start.</div></div>
+    <div class="buddy" id="buddy"><div class="face">🦉</div><div class="bubble" id="say">Hi! I'm Buddy 🦉 Do you want to <b>read a book</b>, or <b>make your own story</b>?</div></div>
     <div class="heard" id="heard"></div>
-    <div class="row" id="controls" style="margin:14px 0 18px 58px">
-      <button class="big" id="start">Let's read! 🎤</button>
-    </div>
-    <div id="chooser">
-    <div class="row" id="pick" style="margin:0 0 18px 58px">
-      <input type="text" id="title" placeholder="…or type a book title">
-      <button class="ghost" id="go">Find it</button>
-      <button class="ghost" data-book="The Velveteen Rabbit">Velveteen Rabbit</button>
-      <button class="ghost" data-book="The Tale of Peter Rabbit">Peter Rabbit</button>
-      <button class="ghost" data-book="The Fox and the Grapes">Fox &amp; Grapes</button>
-      <label class="ghost" style="cursor:pointer;color:var(--accent);font-weight:600">📷 Page photo<input type="file" id="photo" accept="image/*" hidden></label>
-    </div>
-    <div class="make">
-      <b class="t">✨ Or make your own story from your pictures and your idea</b>
-      <div class="row">
-        <label class="ghost" style="cursor:pointer;color:var(--accent);font-weight:600">🖍️ Add pictures<input type="file" id="pics" accept="image/*" multiple hidden></label>
-        <span class="thumbs" id="thumbs"></span>
-        <button class="ghost" id="ideamic">🎤 Tell my idea</button>
-        <input type="text" id="idea" placeholder="…or type your idea">
-        <button id="makestory">Create my story</button>
+    <div id="chooser" class="choices">
+      <div class="choice">
+        <h3>📖 Read a book</h3>
+        <p>Say a title, pick one, or snap a page.</p>
+        <button class="big" id="start">🎤 Say a book title</button>
+        <div class="row" style="margin-top:12px">
+          <input type="text" id="title" placeholder="…or type a title">
+          <button class="ghost small" id="go">Find</button>
+        </div>
+        <div class="row picks">
+          <button class="ghost small" data-book="The Velveteen Rabbit">🐰 Velveteen Rabbit</button>
+          <button class="ghost small" data-book="The Tale of Peter Rabbit">🥕 Peter Rabbit</button>
+          <button class="ghost small" data-book="The Fox and the Grapes">🦊 Fox &amp; Grapes</button>
+          <label class="ghost small lbl">📷 Page photo<input type="file" id="photo" accept="image/*" hidden></label>
+        </div>
       </div>
-    </div>
+      <div class="choice make">
+        <h3>✨ Make my story</h3>
+        <p>Draw something, tell Buddy your idea, and get your own book.</p>
+        <div class="row">
+          <label class="ghost small lbl">🖍️ Add my pictures<input type="file" id="pics" accept="image/*" multiple hidden></label>
+          <span class="thumbs" id="thumbs"></span>
+        </div>
+        <button class="ghost small" id="ideamic" style="margin-top:10px">🎤 Tell Buddy my idea</button>
+        <input type="text" id="idea" placeholder="…or type your idea here" style="width:100%;margin-top:10px">
+        <button class="big" id="makestory" style="margin-top:12px">✨ Create my story</button>
+      </div>
     </div>
     <div class="book" id="book" hidden>
       <div class="bookhead">
         <div class="book-title" id="booktitle"></div>
         <div class="tools">
+          <span id="controls"></span>
           <button class="ghost small" id="listen">🔊 Listen</button>
           <button class="ghost small" id="newstory">📚 New story</button>
         </div>
@@ -152,12 +232,11 @@
     </div>
     <h2>Words to practice</h2>
     <div class="chips" id="practice"><span style="background:#f3f3f3;color:#999;cursor:default">none yet</span></div>
-    <h2>Questions</h2>
-    <div id="qs"><div class="muted" style="color:var(--muted)">After reading, Buddy asks about the story.</div></div>
-    <h2>Learn more</h2>
-    <div id="learn" style="color:var(--muted)">A fun fact from the web, found with Keenable.</div>
+    <div id="qsec" hidden><h2>Questions</h2><div id="qs"></div></div>
+    <div id="lsec" hidden><h2>Learn more</h2><div id="learn"></div></div>
   </aside>
 </main>
+<footer>Built with Meta Muse Spark (reading, questions, stories) · Muse Image (pictures) · Keenable (books &amp; facts) · speech runs in your browser · books from Project Gutenberg (public domain)</footer>
 <script>
 const $ = s => document.querySelector(s);
 const S = { book:null, qsPromise:null, questions:[], score:null, results:[], learnTopic:"", storyImgs:[], storyFiles:[], idea:"" };
@@ -181,7 +260,7 @@ function renderProfile(p){
     ${sparkline(h.map(x => x.wcpm))}${skills}
     <div style="font-size:13px;margin-top:4px">Practicing: ${p.practice.length ? p.practice.map(w => `<b style="color:#8a4b00">${w}</b>`).join(", ") : "–"}${p.mastered.length ? ` · mastered ⭐ ${p.mastered.length}` : ""}</div>`;
 }
-loadProfile();
+loadProfile().then(() => { if (S.profile.history.length) $("#say").innerHTML = `Welcome back, ${LEARNER()}! 🌟 Want to <b>read a book</b>, or <b>make your own story</b>?`; });
 const post = (url, body) => fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)})
   .then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.statusText); return j; });
 
@@ -242,9 +321,11 @@ function renderPassage(){
     const html = ws.map((w, k) => `<span data-i="${start + k}">${w.replace(/</g,"&lt;")}</span>`).join(" ");
     const ii = b.pages && b.pages[pi] ? b.pages[pi].image_index : -1;
     const img = b.via === "story" ? (S.storyImgs[ii] || S.storyImgs[pi % Math.max(1, S.storyImgs.length)] || "")
-              : b.via === "muse-vision" ? (S.photoUrl || "") : "";
-    return { start, end: gi, html, img };
+              : b.via === "muse-vision" ? (S.photoUrl || "")
+              : (b.pages && b.pages[pi] && b.pages[pi].image_url) || "";       // the book's own illustrations
+    return { start, end: gi, html, img, text: t, gen: null };
   });
+  planPictures();
   $("#passage").innerHTML = S.pages.map((p, i) => `<div class="pg" data-p="${i}" hidden>${p.html}</div>`).join("");
   $("#dots").innerHTML = S.pages.map((_, i) => `<span data-p="${i}"></span>`).join("");
   document.querySelectorAll("#dots span").forEach(d => d.onclick = () => showPage(+d.dataset.p));
@@ -255,10 +336,32 @@ function showPage(n){
   S.page = n;
   document.querySelectorAll("#passage .pg").forEach(d => d.hidden = +d.dataset.p !== n);
   document.querySelectorAll("#dots span").forEach(d => d.classList.toggle("on", +d.dataset.p === n));
-  const img = S.pages[n].img;
-  $("#pagepic").innerHTML = img ? `<img src="${img}" alt="">` : "";
+  const pg = S.pages[n], img = pg.gen || pg.img;
+  $("#pagepic").innerHTML = img ? `<img src="${img}" alt="">` + (pg.gen ? `<span class="badge">✨ new picture · ${S.book.via === "story" ? "in your drawing style" : "in the original style"}</span>` : "") : "";
+  $("#pagepic").classList.toggle("drawing", !!pg.pending);
   $("#prev").disabled = n === 0; $("#next").disabled = n === S.pages.length - 1;
   const page = $(".page"); page.style.animation = "none"; page.offsetHeight; page.style.animation = "";
+}
+// Muse Image: pages that would repeat a picture (or have none) get a new one drawn from the original picture
+async function planPictures(){
+  const b = S.book, token = S.bookToken = Math.random(); let prev = null, ref = null;
+  const todo = [];
+  S.pages.forEach((p, i) => {
+    ref = p.img || ref;
+    const story = b.via === "story";
+    if (ref && (story ? i > 0 : (!p.img || p.img === prev))) { p.pending = true; p.ref = ref; todo.push(p); }
+    prev = p.img || prev;
+  });
+  for (let k = 0; k < todo.length; k += 2) {                       // two at a time
+    await Promise.all(todo.slice(k, k + 2).map(async p => {
+      try {
+        const r = await post("/api/illustrate", { page_text: p.text, ref_image: p.ref, title: b.title, kind: b.via === "story" ? "story" : "book" });
+        if (S.bookToken === token) p.gen = r.image;
+      } catch (e) { /* keep the original picture */ }
+      p.pending = false;
+      if (S.bookToken === token && S.pages.indexOf(p) === S.page) showPage(S.page);
+    }));
+  }
 }
 const pageOf = i => S.pages.findIndex(p => i >= p.start && i < p.end);
 $("#prev").onclick = () => { stopListen(); showPage(S.page - 1); };
@@ -303,8 +406,8 @@ $("#listen").onclick = async () => {
   for (let n = S.page; listening && n < S.pages.length; n++) { showPage(n); await readPage(n); if (listening && n < S.pages.length - 1) await new Promise(r => setTimeout(r, 500)); }
   stopListen();
 };
-$("#newstory").onclick = () => { stopListen(); $("#book").hidden = true; $("#chooser").hidden = false; $("#loading").innerHTML = "";
-  $("#controls").innerHTML = `<button class="big" id="start2">Let's read! 🎤</button>`; $("#start2").onclick = () => $("#start").onclick();
+$("#newstory").onclick = () => { stopListen(); if (reader && reader.st.on) stopReading(); $("#book").hidden = true; $("#chooser").hidden = false;
+  $("#loading").innerHTML = ""; $("#controls").innerHTML = "";
   say("What would you like to read next?"); };
 
 // ---------- flow ----------
@@ -319,7 +422,7 @@ function showBook(){
   const b = S.book; stopListen();
   $("#loading").innerHTML = ""; $("#chooser").hidden = true; $("#book").hidden = false;
   $("#booktitle").innerHTML = `<b>${b.title}</b> ${b.parts > 1 ? `· part ${b.part + 1} of ${b.parts}` : ""}`;
-  $("#src").innerHTML = b.via === "keenable" ? `Found with Keenable on <a href="${b.source}" target="_blank">Project Gutenberg</a> · text check ${Math.round(b.match*100)}% match to the book`
+  $("#src").innerHTML = b.via === "keenable" ? `Found with Keenable on <a href="${b.source}" target="_blank">Project Gutenberg</a> · ${Math.round(b.match*100)}% match to the book${b.pictures ? " · original illustrations" : ""}`
                        : b.via === "muse-vision" ? "Read from your photo by Muse Spark" : `Source: <a href="${b.source}" target="_blank">Project Gutenberg</a>`;
   if (b.via === "story") {
     const ok = v => v ? "✓" : "✗", c = b.check;
@@ -333,6 +436,7 @@ function showBook(){
   say(`Here it is! When you're ready, press <b>Start reading</b> and read the story out loud. I'm listening!`);
 }
 function resetSide(){ ["#wcpm","#acc","#comp"].forEach(s => $(s).textContent = "–");
+  $("#qsec").hidden = true; $("#lsec").hidden = true; document.querySelectorAll(".change").forEach(e => e.remove());
   $("#practice").innerHTML = `<span style="background:#f3f3f3;color:#999;cursor:default">none yet</span>`;
   $("#qs").innerHTML = ""; $("#learn").textContent = "A fun fact from the web, found with Keenable."; }
 function beginReading(){
@@ -363,7 +467,7 @@ async function askQuestions(){
   $("#controls").innerHTML = `<span class="spinner"></span> getting questions ready…`;
   const { questions, learn_topic } = await S.qsPromise; S.questions = questions; S.learnTopic = learn_topic;
   const learnP = learn_topic ? post("/api/learn", { topic: learn_topic, title: S.book.title }).catch(() => null) : Promise.resolve(null);
-  $("#qs").innerHTML = questions.map((q, i) => `<div class="q" id="q${i}"><div class="k">${q.kind}</div>${q.question}<div class="a"></div></div>`).join("");
+  $("#qsec").hidden = false; $("#qs").innerHTML = questions.map((q, i) => `<div class="q" id="q${i}"><div class="k">${q.kind}</div>${q.question}<div class="a"></div></div>`).join("");
   $("#controls").innerHTML = `<button class="ghost" id="skipq">Skip question</button>`;
   let right = 0; S.answers = [];
   for (let i = 0; i < questions.length; i++) {
@@ -390,13 +494,14 @@ async function askQuestions(){
   highlightQuote("");
   $("#comp").textContent = `${right}/${questions.length}`;
   const learn = await learnP;
+  if (learn) $("#lsec").hidden = false;
   if (learn) $("#learn").innerHTML = `<div class="learn">🌍 <b>${learn.topic}</b>: ${learn.fact}<br><a href="${learn.source_url}" target="_blank">source: ${learn.source_title}</a></div>`;
   const msg = right === questions.length ? `Amazing! You understood all ${right} questions! ` : right > 0 ? `You got <b>${right} out of ${questions.length}</b>. Nice thinking! ` : `Those were tricky questions. Reading it again will help! `;
   await say(msg + (learn ? `Here's a fun fact about ${learn.topic}: ${learn.fact}` : "Great job today!"));
   const sess = await post("/api/session", { learner: LEARNER(), title: S.book.title, source: S.book.via, score: S.score, answers: S.answers });
   renderProfile(sess.profile); const ch = sess.change;
   const up = ch.level_to > ch.level_from, down = ch.level_to < ch.level_from;
-  $("#learn").insertAdjacentHTML("afterend", `<div class="change">${up ? "🎉 Level up! " : down ? "🌱 " : "👍 "}Level ${ch.level_from} → ${ch.level_to}: ${ch.why}.`
+  $("#lsec").insertAdjacentHTML("afterend", `<div class="change">${up ? "🎉 Level up! " : down ? "🌱 " : "👍 "}Level ${ch.level_from} → ${ch.level_to}: ${ch.why}.`
     + (ch.mastered.length ? `<br>⭐ Mastered: <b>${ch.mastered.join(", ")}</b>` : "")
     + (sess.profile.practice.length ? `<br>📝 Your next story will practice: <b>${sess.profile.practice.slice(0, 3).join(", ")}</b>` : "") + `</div>`);
   if (up) await say(`Level up! You're now on level ${ch.level_to}!`);

@@ -7,6 +7,7 @@ source word-for-word (>= 95%), so the answer key is always the real book.
 """
 import os, re
 from difflib import SequenceMatcher
+from urllib.parse import urljoin
 from types import SimpleNamespace
 
 import httpx
@@ -68,12 +69,83 @@ def ksearch(query, **params):
             for x in r.json().get("results", [])]
 
 
+_IMG_SRC = re.compile(r"!\[([^\n]*?)\]\(([^)\s]+)\)")
+
+
+def illustrations(md, base_url):
+    """Body words in order, each tagged with the illustration that follows its paragraph (the book's own
+    pictures; in Gutenberg picture books an illustration comes right after the text it shows)."""
+    words, tags, pending = [], [], []
+    for chunk in re.split(r"\n\s*\n", _body(md)):
+        srcs = [urljoin(base_url, src) for alt, src in _IMG_SRC.findall(chunk)
+                if not src.lower().endswith(".gif") and "detail" not in (alt + src).lower()]
+        ws = [norm(w) for w in _plain(chunk).split() if norm(w)]
+        if ws:
+            pending.append(len(words))
+            words += ws
+            tags += [None] * len(ws)
+        if srcs and pending:            # picture after text: it illustrates the paragraph(s) just before it
+            start = pending[0]
+            for i in range(start, len(words)):
+                tags[i] = tags[i] or srcs[0]
+            pending = []
+    return words, tags
+
+
+_ABBR = re.compile(r"\b(Mr|Mrs|Ms|Dr|St|Mt|Jr|Sr)\.")
+
+
+def sentences(text):
+    """Split into sentences without breaking on Mr. / Mrs. / Dr. etc."""
+    t = _ABBR.sub(lambda m: m.group(1) + "\u2024", text)          # one-dot leader as a stand-in for the period
+    parts = re.findall(r"[^.!?]+[.!?]+[\"”’']?|[^.!?]+$", t) or [t]
+    return [x.replace("\u2024", ".") for x in parts]
+
+
+def split_pages(text, target=35):
+    sents = sentences(text)
+    out, cur = [], ""
+    for x in sents:
+        cur += x
+        if len(cur.split()) >= target:
+            out.append(cur.strip()); cur = ""
+    if cur.strip():
+        out.append(cur.strip())
+    return out
+
+
+def attach_pictures(pages, words, tags):
+    """Find each page's words in the book (5-word anchor, skipping the first word in case of a drop cap)."""
+    out, last = [], None
+    joined = " " + " ".join(words) + " "
+    for pg in pages:
+        pw = [norm(w) for w in pg.split() if norm(w)]
+        img = None
+        for k in range(1, max(2, len(pw) - 4)):
+            anchor = " " + " ".join(pw[k:k + 5]) + " "
+            pos = joined.find(anchor)
+            if pos >= 0:
+                wi = joined[:pos].count(" ")
+                img = next((t for t in tags[wi:wi + len(pw)] if t), None)
+                break
+        img = img or last
+        out.append({"text": pg, "image_url": img})
+        last = img
+    return out
+
+
 def search_book(title):
     """Keenable search restricted to Project Gutenberg. Returns (gutenberg_id, title, url) or None."""
     res = ksearch(f"{title} ebook", site="gutenberg.org", max_results=8)
+    generic = {"the", "and", "tale", "story", "book", "ebook", "books", "project", "gutenberg", "nonexistent"}
+    key = lambda w: re.sub(r"'s$", "", norm(w))
+    want = {key(w) for w in title.split() if len(key(w)) > 2} - generic
     for r in res:
         m = re.search(r"/(?:ebooks|files|etext|cache/epub)/(\d+)", r.url)
-        if m:
+        if not m:
+            continue
+        have = {key(w) for w in (r.title + " " + (r.snippet or "")[:300]).split()}
+        if want and len(want & have) >= max(1, -(-len(want) * 2 // 3)):      # most title words must match
             return int(m.group(1)), r.title, r.url
     return None
 
@@ -129,8 +201,7 @@ def pick_passage(paras, title, part=0, target_words=170):
         start += 1                      # drop a leading table of contents / heading
     story = paras[start:]
     text = " ".join(story)
-    sents = re.findall(r".+?(?:[.!?][\"”’']?(?=\s|$)|$)", text)
-    sents = [x.strip() for x in sents if x.strip()]
+    sents = [x.strip() for x in sentences(text) if x.strip()]
     chunks, cur = [], []
     for s in sents:
         cur.append(s)
@@ -170,9 +241,11 @@ def get_passage(title, part=0):
     paras = _paragraphs(_plain(_body(md)))
     raw, parts = pick_passage(paras, title, part)
     text, ratio = clean_typography(raw)
+    words, tags = illustrations(md, url)
+    pages = attach_pictures(split_pages(text), words, tags)
     nice = re.sub(r"\s*(by .*|\| Project Gutenberg.*)$", "", found_title).strip()
     if not nice or "/" in nice or "gutenberg" in nice.lower():
         nice = title.strip() if title.strip() != title.strip().lower() else title.strip().title()
     return {"title": nice,
             "source": f"https://www.gutenberg.org/ebooks/{gid}", "text": text, "part": part, "parts": parts,
-            "via": "keenable", "match": ratio}
+            "via": "keenable", "match": ratio, "pages": pages, "pictures": sum(1 for p in pages if p["image_url"])}

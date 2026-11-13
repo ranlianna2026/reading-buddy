@@ -21,7 +21,15 @@ def norm(tok):
 
 
 def _close(a, b):
-    return a == b or (len(a) > 3 and SequenceMatcher(None, a, b).ratio() >= 0.8)
+    """Tolerate small speech-recognition slips (color/colour), not a cut-short word (velvet/velveteen)."""
+    return a == b or (len(a) > 3 and abs(len(a) - len(b)) <= 1 and SequenceMatcher(None, a, b).ratio() >= 0.85)
+
+
+# very common sight words: still scored, but not worth a practice story
+SIGHT = set("""a an and are as at be but by can did do for from had has have he her him his how i if in into is it its
+just like me my no not of on or our out said she so than that the their them then there they this to too up us was we
+were what when where which who will with you your one two all any some very would could should about after again
+over under down off went came come here been them""".split())
 
 
 def score(passage, transcript, seconds):
@@ -82,5 +90,6 @@ def score(passage, transcript, seconds):
         "finished": reached >= len(ref_n) - 2,
         "miscues": miscues,
         "inserted_words": inserted[:20],
-        "practice_words": sorted({w for w in (m["expected"].strip(".,;:!?\"'()—–-“”‘’").lower() for m in miscues) if len(w) > 3})[:8],
+        "practice_words": sorted({w for w in (m["expected"].strip(".,;:!?\"'()—–-“”‘’").lower() for m in miscues)
+                                  if len(w) > 3 and w not in SIGHT})[:8],
     }
