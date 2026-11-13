@@ -324,7 +324,6 @@ export default function Read({ loaderData }: Route.ComponentProps) {
             <div className="overflow-hidden rounded-[22px] border-2 border-line">
               <Scene seed={story.seed} place={story.place} width={224} height={300} alt={`${story.title}, drawn`} />
             </div>
-            <p className="mt-2 text-center text-xs text-muted">drawn as you read</p>
           </aside>
         </main>
         <ActionBar>
