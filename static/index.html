@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reading Buddy</title>
+<style>
+  :root { --ink:#1f2340; --muted:#6b7090; --bg:#fff8ec; --card:#fff; --accent:#5b5bd6; --accent-soft:#ececff;
+          --good:#1f9d63; --good-soft:#e3f6ec; --warn:#e07b00; --warn-soft:#fff1dc; --skip:#9aa0b8; --quote:#fff3a6; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family: "Avenir Next", "Nunito", system-ui, sans-serif; color:var(--ink); background:var(--bg); }
+  header { display:flex; align-items:center; gap:14px; padding:16px 28px; }
+  header .logo { font-size:34px; }
+  header h1 { font-size:24px; margin:0; }
+  header .tag { color:var(--muted); font-size:14px; }
+  header .powered { margin-left:auto; font-size:12.5px; color:var(--muted); background:#fff; padding:6px 12px; border-radius:20px; border:1px solid #eee2c8; }
+  main { display:grid; grid-template-columns: 1fr 380px; gap:22px; padding:0 28px 28px; }
+  .card { background:var(--card); border-radius:22px; box-shadow:0 2px 0 #f0e2c4, 0 8px 24px rgba(60,40,0,.06); padding:22px 26px; }
+  .buddy { display:flex; gap:14px; align-items:flex-start; margin-bottom:16px; }
+  .buddy .face { font-size:44px; line-height:1; transition: transform .2s; }
+  .buddy.talking .face { animation: bob .5s infinite alternate; }
+  @keyframes bob { to { transform: translateY(-4px) rotate(-4deg); } }
+  .bubble { background:var(--accent-soft); border-radius:18px; padding:14px 18px; font-size:20px; flex:1; min-height:56px; }
+  .heard { color:var(--muted); font-size:16px; min-height:22px; margin:6px 0 0 58px; font-style:italic; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  button { font: inherit; font-size:17px; border:0; border-radius:16px; padding:12px 20px; cursor:pointer;
+           background:var(--accent); color:#fff; font-weight:600; }
+  button.ghost { background:#fff; color:var(--accent); border:2px solid var(--accent-soft); }
+  button.big { font-size:22px; padding:16px 30px; border-radius:22px; }
+  button.rec { background:#e0445a; }
+  button:disabled { opacity:.45; cursor:default; }
+  input[type=text] { font:inherit; font-size:17px; padding:11px 14px; border-radius:14px; border:2px solid #eee2c8; min-width:260px; }
+  .book-title { font-size:15px; color:var(--muted); margin:2px 0 10px; }
+  .book-title b { color:var(--ink); font-size:20px; }
+  .passage { font-family: Georgia, "Iowan Old Style", serif; font-size:27px; line-height:1.75; letter-spacing:.2px; }
+  .passage span { border-radius:6px; padding:1px 2px; transition: background .3s; }
+  .passage .misread { background:var(--warn-soft); border-bottom:3px solid var(--warn); }
+  .passage .skipped { color:var(--skip); text-decoration: line-through; text-decoration-color: var(--warn); }
+  .passage .reached { background: var(--good-soft); }
+  .passage .quote { background:var(--quote); }
+  .empty { color:var(--muted); font-size:18px; padding:30px 0; text-align:center; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0; }
+  .stat { background:var(--bg); border-radius:16px; padding:12px; text-align:center; }
+  .stat b { display:block; font-size:28px; }
+  .stat small { color:var(--muted); }
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:18px 0 10px; }
+  .q { border-radius:14px; padding:10px 12px; margin-bottom:8px; background:var(--bg); font-size:15.5px; }
+  .q .k { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  .q.correct { background:var(--good-soft); } .q.partly, .q.not_yet { background:var(--warn-soft); }
+  .q .a { color:var(--muted); font-style:italic; margin-top:4px; }
+  .chips span { display:inline-block; background:var(--warn-soft); color:#8a4b00; border-radius:20px; padding:5px 12px; margin:3px; cursor:pointer; font-weight:600; }
+  .learn { background:#eef7ff; border-radius:16px; padding:14px; font-size:16px; }
+  .learn a { color:var(--accent); font-size:13px; }
+  .src { font-size:12.5px; color:var(--muted); margin-top:6px; }
+  .src a { color:var(--muted); }
+  .spinner { display:inline-block; width:16px; height:16px; border:3px solid #ccd; border-top-color:var(--accent); border-radius:50%; animation: spin 1s linear infinite; vertical-align:-2px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">📚</div>
+  <div><h1>Reading Buddy</h1><div class="tag">Read aloud. Talk about it. Grow every day.</div></div>
+  <div class="powered">Muse Spark · Keenable search · speech in your browser</div>
+</header>
+<main>
+  <section class="card">
+    <div class="buddy" id="buddy"><div class="face">🦉</div><div class="bubble" id="say">Hi! Press <b>Let's read!</b> to start.</div></div>
+    <div class="heard" id="heard"></div>
+    <div class="row" id="controls" style="margin:14px 0 18px 58px">
+      <button class="big" id="start">Let's read! 🎤</button>
+    </div>
+    <div class="row" id="pick" style="margin:0 0 18px 58px">
+      <input type="text" id="title" placeholder="…or type a book title">
+      <button class="ghost" id="go">Find it</button>
+      <button class="ghost" data-book="The Velveteen Rabbit">Velveteen Rabbit</button>
+      <button class="ghost" data-book="The Tale of Peter Rabbit">Peter Rabbit</button>
+      <button class="ghost" data-book="The Fox and the Grapes">Fox &amp; Grapes</button>
+      <label class="ghost" style="cursor:pointer;color:var(--accent);font-weight:600">📷 Page photo<input type="file" id="photo" accept="image/*" hidden></label>
+    </div>
+    <div class="book-title" id="booktitle"></div>
+    <div class="passage" id="passage"><div class="empty">Your story will appear here.</div></div>
+    <div class="src" id="src"></div>
+  </section>
+  <aside class="card">
+    <h2>Reading</h2>
+    <div class="stats">
+      <div class="stat"><b id="wcpm">–</b><small>words / min</small></div>
+      <div class="stat"><b id="acc">–</b><small>accuracy</small></div>
+      <div class="stat"><b id="comp">–</b><small>understood</small></div>
+    </div>
+    <h2>Words to practice</h2>
+    <div class="chips" id="practice"><span style="background:#f3f3f3;color:#999;cursor:default">none yet</span></div>
+    <h2>Questions</h2>
+    <div id="qs"><div class="muted" style="color:var(--muted)">After reading, Buddy asks about the story.</div></div>
+    <h2>Learn more</h2>
+    <div id="learn" style="color:var(--muted)">A fun fact from the web, found with Keenable.</div>
+  </aside>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const S = { book:null, qsPromise:null, questions:[], score:null, results:[], learnTopic:"" };
+const post = (url, body) => fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)})
+  .then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.statusText); return j; });
+
+// ---------- voice out ----------
+let VOICE = null;
+function pickVoice(){ const vs = speechSynthesis.getVoices();
+  VOICE = vs.find(v => /Samantha|Google US English|Ava|Allison/i.test(v.name) && v.lang.startsWith("en")) || vs.find(v=>v.lang==="en-US") || null; }
+speechSynthesis.onvoiceschanged = pickVoice; pickVoice();
+function say(text, show=true){
+  if (show) $("#say").innerHTML = text;
+  return new Promise(res => {
+    const plain = text.replace(/<[^>]+>/g, "");
+    const u = new SpeechSynthesisUtterance(plain); if (VOICE) u.voice = VOICE; u.rate = 0.95; u.pitch = 1.1;
+    $("#buddy").classList.add("talking");
+    u.onend = u.onerror = () => { $("#buddy").classList.remove("talking"); res(); };
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  });
+}
+
+// ---------- voice in (Chrome Web Speech API) ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+function listenOnce(timeoutMs=9000){
+  return new Promise(res => {
+    if (!SR) return res(prompt("Type your answer:") || "");
+    const r = new SR(); r.lang = "en-US"; r.interimResults = true; r.continuous = false;
+    let final = "", done = false; const finish = () => { if (!done) { done = true; try{r.stop()}catch{}; res(final.trim()); } };
+    r.onresult = e => { let interim = ""; for (const x of e.results) (x.isFinal ? final = x[0].transcript : interim = x[0].transcript);
+      $("#heard").textContent = "🎤 " + (final || interim); };
+    r.onend = finish; r.onerror = finish; setTimeout(finish, timeoutMs); r.start();
+    $("#heard").textContent = "🎤 listening…";
+  });
+}
+let reader = null;
+function startReading(onUpdate){
+  const st = { text:"", interim:"", on:true, t0:performance.now() };
+  const r = new SR(); r.lang = "en-US"; r.interimResults = true; r.continuous = true;
+  r.onresult = e => { let fin = "", interim = "";
+    for (let i = 0; i < e.results.length; i++) (e.results[i].isFinal ? fin += e.results[i][0].transcript + " " : interim += e.results[i][0].transcript);
+    st.cur = fin; st.interim = interim; onUpdate((st.text + " " + fin + " " + interim).trim()); };
+  r.onend = () => { if (st.on) { st.text += " " + (st.cur || ""); st.cur = ""; try { r.start(); } catch {} } };   // Chrome stops on pauses
+  r.start(); reader = { st, r };
+}
+function stopReading(){ const {st, r} = reader; st.on = false; try { r.stop(); } catch {}
+  return { transcript: (st.text + " " + (st.cur || "") + " " + st.interim).replace(/\s+/g," ").trim(), seconds: (performance.now() - st.t0)/1000 }; }
+
+// ---------- passage rendering ----------
+function renderPassage(text){
+  $("#passage").innerHTML = text.split(/\s+/).map((w,i) => `<span data-i="${i}">${w.replace(/</g,"&lt;")}</span>`).join(" ");
+}
+const norm = w => w.toLowerCase().replace(/[^a-z0-9']/g,"");
+function markReached(heard){       // live progress: greedy forward match of heard words onto the passage
+  const spans = [...document.querySelectorAll("#passage span")], ref = spans.map(s => norm(s.textContent));
+  let i = 0; for (const h of heard.split(/\s+/).map(norm).filter(Boolean)) {
+    for (let k = i; k < Math.min(i + 4, ref.length); k++) if (ref[k] === h) { i = k + 1; break; } }
+  spans.forEach((s, k) => s.classList.toggle("reached", k < i));
+}
+function highlightQuote(quote){
+  document.querySelectorAll("#passage .quote").forEach(s => s.classList.remove("quote"));
+  if (!quote) return; const q = quote.split(/\s+/).map(norm).filter(Boolean);
+  const spans = [...document.querySelectorAll("#passage span")], ref = spans.map(s => norm(s.textContent));
+  for (let i = 0; i < ref.length; i++) { let j = 0, k = i;
+    while (k < ref.length && j < q.length) { if (!ref[k]) { k++; continue; } if (ref[k] !== q[j]) break; j++; k++; }
+    if (j === q.length) { for (let x = i; x < k; x++) spans[x].classList.add("quote"); spans[i].scrollIntoView({block:"center", behavior:"smooth"}); return; } }
+}
+
+// ---------- flow ----------
+async function loadBook(title){
+  $("#booktitle").innerHTML = `<span class="spinner"></span> Finding <b>${title}</b>…`;
+  say(`Great choice! Let me find ${title}.`);
+  try { S.book = await post("/api/book", { title }); }
+  catch (e) { $("#booktitle").textContent = ""; return say(`Hmm, I couldn't find that one. Try another book?`); }
+  showBook();
+}
+function showBook(){
+  const b = S.book;
+  $("#booktitle").innerHTML = `<b>${b.title}</b> ${b.parts > 1 ? `· part ${b.part + 1} of ${b.parts}` : ""}`;
+  $("#src").innerHTML = b.via === "keenable" ? `Found with Keenable on <a href="${b.source}" target="_blank">Project Gutenberg</a> · text check ${Math.round(b.match*100)}% match to the book`
+                       : b.via === "muse-vision" ? "Read from your photo by Muse Spark" : `Source: <a href="${b.source}" target="_blank">Project Gutenberg</a>`;
+  renderPassage(b.text); resetSide();
+  S.qsPromise = post("/api/questions", { passage: b.text });          // prepare questions while the child reads
+  $("#controls").innerHTML = `<button class="big rec" id="readbtn">Start reading 🎤</button>`;
+  $("#readbtn").onclick = beginReading;
+  say(`Here it is! When you're ready, press <b>Start reading</b> and read the story out loud. I'm listening!`);
+}
+function resetSide(){ ["#wcpm","#acc","#comp"].forEach(s => $(s).textContent = "–");
+  $("#practice").innerHTML = `<span style="background:#f3f3f3;color:#999;cursor:default">none yet</span>`;
+  $("#qs").innerHTML = ""; $("#learn").textContent = "A fun fact from the web, found with Keenable."; }
+function beginReading(){
+  if (!SR) return alert("Please use Chrome for speech recognition.");
+  speechSynthesis.cancel(); $("#say").innerHTML = "I'm listening… read at your own pace. 📖";
+  startReading(t => { $("#heard").textContent = "🎤 " + t.split(" ").slice(-12).join(" "); markReached(t); });
+  $("#controls").innerHTML = `<button class="big" id="donebtn">I'm done! ✅</button>`;
+  $("#donebtn").onclick = finishReading;
+}
+async function finishReading(){
+  const { transcript, seconds } = stopReading(); $("#heard").textContent = "";
+  $("#controls").innerHTML = `<span class="spinner"></span>`;
+  const s = S.score = await post("/api/score", { passage: S.book.text, transcript, seconds });
+  document.querySelectorAll("#passage span").forEach((el, i) => { el.classList.remove("reached");
+    const st = s.status[i]; if (st === "misread" || st === "skipped") { el.classList.add(st);
+      const m = s.miscues.find(m => m.index === i); el.title = m && m.said ? `you said "${m.said}"` : "skipped"; } });
+  $("#wcpm").textContent = s.wcpm; $("#acc").textContent = Math.round(s.accuracy * 100) + "%";
+  $("#practice").innerHTML = s.practice_words.length ? s.practice_words.map(w => `<span title="hear it">${w} 🔊</span>`).join("")
+                                                    : `<span style="background:var(--good-soft);color:var(--good)">none, great job! ⭐</span>`;
+  document.querySelectorAll("#practice span").forEach(el => el.onclick = () => say(el.textContent.replace(" 🔊",""), false));
+  const praise = s.accuracy >= 0.95 ? "Wow, super smooth reading!" : s.accuracy >= 0.85 ? "Nice reading!" : "Good effort! Reading out loud takes practice.";
+  await say(`${praise} You read <b>${s.words_correct} words</b> correctly, about <b>${s.wcpm} words a minute</b>.`
+            + (s.practice_words.length ? ` Let's practice <b>${s.practice_words.slice(0,3).join(", ")}</b> later.` : ""));
+  await say("Now let's talk about the story!");
+  askQuestions();
+}
+async function askQuestions(){
+  $("#controls").innerHTML = `<span class="spinner"></span> getting questions ready…`;
+  const { questions, learn_topic } = await S.qsPromise; S.questions = questions; S.learnTopic = learn_topic;
+  const learnP = learn_topic ? post("/api/learn", { topic: learn_topic, title: S.book.title }).catch(() => null) : Promise.resolve(null);
+  $("#qs").innerHTML = questions.map((q, i) => `<div class="q" id="q${i}"><div class="k">${q.kind}</div>${q.question}<div class="a"></div></div>`).join("");
+  $("#controls").innerHTML = `<button class="ghost" id="skipq">Skip question</button>`;
+  let right = 0;
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i], el = $(`#q${i}`); el.scrollIntoView({block:"nearest"});
+    let verdict = "not_yet";
+    for (let attempt = 1; attempt <= 2 && verdict !== "correct"; attempt++) {
+      await say(attempt === 1 ? q.question : "Want to try again? " + q.question);
+      const answer = await listenOnce();
+      el.querySelector(".a").textContent = answer ? `“${answer}”` : "(no answer)";
+      if (!answer) { await say("I didn't catch that."); continue; }
+      say(["Hmm, let me think…", "Ooh, interesting…", "Let me check the story…"][attempt % 3]);
+      const g = await post("/api/grade", { passage: S.book.text, question: q, answer, attempt });
+      verdict = g.verdict; el.className = "q " + verdict; highlightQuote(g.quote);
+      await say(g.feedback + (verdict !== "correct" && g.hint && attempt < 2 ? " " + g.hint : ""));
+    }
+    if (verdict === "correct") right++;
+    $("#heard").textContent = "";
+  }
+  highlightQuote("");
+  $("#comp").textContent = `${right}/${questions.length}`;
+  const learn = await learnP;
+  if (learn) $("#learn").innerHTML = `<div class="learn">🌍 <b>${learn.topic}</b>: ${learn.fact}<br><a href="${learn.source_url}" target="_blank">source: ${learn.source_title}</a></div>`;
+  const msg = right === questions.length ? `Amazing! You understood all ${right} questions! ` : right > 0 ? `You got <b>${right} out of ${questions.length}</b>. Nice thinking! ` : `Those were tricky questions. Reading it again will help! `;
+  await say(msg + (learn ? `Here's a fun fact about ${learn.topic}: ${learn.fact}` : "Great job today!"));
+  const next = S.book.parts > S.book.part + 1;
+  $("#controls").innerHTML = (next ? `<button class="big" id="nextbtn">Read the next part ➡️</button> ` : "") + `<button class="ghost" id="againbtn">Read it again 🔁</button>`;
+  if (next) $("#nextbtn").onclick = async () => { $("#controls").innerHTML = `<span class="spinner"></span>`;
+    S.book = await post("/api/book", { title: S.book.title, part: S.book.part + 1 }); showBook(); };
+  $("#againbtn").onclick = showBook;
+}
+
+// ---------- entry points ----------
+$("#start").onclick = async () => {
+  await say("Hi! I'm Buddy. What are you going to read today?");
+  const t = await listenOnce(8000);
+  if (t) loadBook(t.replace(/^(i'm going to read|i want to read|let's read|i'm reading)\s*/i, ""));
+  else say("You can also tap a book or type a title!");
+};
+$("#go").onclick = () => $("#title").value.trim() && loadBook($("#title").value.trim());
+$("#title").onkeydown = e => e.key === "Enter" && $("#go").onclick();
+document.querySelectorAll("[data-book]").forEach(b => b.onclick = () => loadBook(b.dataset.book));
+$("#photo").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  $("#booktitle").innerHTML = `<span class="spinner"></span> Reading your page…`; say("Ooh, let me look at your page!");
+  const fd = new FormData(); fd.append("file", f);
+  const r = await fetch("/api/page_photo", { method:"POST", body: fd }); S.book = await r.json(); showBook();
+};
+</script>
+</body>
+</html>
