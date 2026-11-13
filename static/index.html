@@ -163,7 +163,9 @@
   .langbar button { font-size:15px; padding:7px 14px; border-radius:20px; background:#fff; color:var(--ink); border:2px solid #efe3c9; box-shadow:0 3px 0 #efe3c9; }
   .langbar button.on { background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:0 3px 0 #4b3fc4; }
   .flag { font-size:18px; margin-left:6px; }
-  #parentbtn { margin-left:10px; }
+  #parentbtn { margin-left:10px; } #homebtn { margin-left:auto; margin-right:10px; }
+  .reader { margin-left:0 !important; }
+  .qhome { position:absolute; right:16px; top:14px; font-size:14px; padding:6px 12px; z-index:2; }
   .redraw { position:absolute; right:10px; top:8px; background:rgba(255,255,255,.92); color:var(--accent); border:2px solid #e3dfff;
             box-shadow:none; font-size:13px; padding:5px 10px; border-radius:12px; }
   .reasons { display:flex; gap:6px; flex-wrap:wrap; }
@@ -277,8 +279,9 @@
 </head>
 <body>
 <header>
-  <div class="logo">📚</div>
-  <div><h1>Reading <span>Buddy</span></h1><div class="tag">Read aloud. Talk about it. Grow every day.</div></div>
+  <div class="logo" id="homelogo" title="Home" style="cursor:pointer">📚</div>
+  <div id="homelink" title="Home" style="cursor:pointer"><h1>Reading <span>Buddy</span></h1><div class="tag">Read aloud. Talk about it. Grow every day.</div></div>
+  <button class="ghost small" id="homebtn" title="Back to the home page">🏠 Home</button>
   <label class="reader">👤 Reader <input type="text" id="learner" title="Who is reading?"></label>
   <button class="ghost small" id="parentbtn" title="Feedback and review for grown-ups">👪 Parent</button>
 </header>
@@ -697,7 +700,7 @@ function proofHTML(quote){                          // the supporting sentence, 
   return `<div class="proof"><div class="t"><small>📖 From the story</small><mark>${quote}</mark></div></div>`;
 }
 function quizCard(i, n, q){
-  $("#qcard").innerHTML = `
+  $("#qcard").innerHTML = `<button class="ghost small qhome" id="qhome" title="Leave the quiz and go home">🏠</button>
     <div class="qtop"><span class="qdots">${S.answers.map(a => `<span class="${a.verdict === "correct" ? "correct" : "miss"}"></span>`).join("")}${Array.from({length: n - S.answers.length}, (_, k) => `<span class="${k === 0 ? "on" : ""}"></span>`).join("")}</span>
       <span class="qnum">Question ${i + 1} of ${n}</span><span class="qkind">${KIND[q.kind] || q.kind}</span></div>
     <div class="qask"><div class="face">🦉</div><div class="qtext">${q.question}</div></div>
@@ -709,6 +712,7 @@ function quizCard(i, n, q){
     <div id="qproof"></div>
     <div class="qactions"><span><button class="ghost small" id="qagain">🔁 Hear it again</button> <button class="ghost small" id="qhint">💡 Hint</button></span><button class="ghost small" id="qskip">Skip ›</button></div>`;
   $("#qagain").onclick = () => { speechSynthesis.cancel(); say(q.question, false, BL()); };
+  $("#qhome").onclick = goHome;
   $("#qhint").onclick = () => { $("#qproof").innerHTML = proofHTML(q.quote).replace("📖 From the story", "💡 Look here in the story"); sayL("Look at this part of the story!"); };
   $("#qskip").onclick = () => { S.skipQ = true; speechSynthesis.cancel(); S.abortListen && S.abortListen(); };
 }
@@ -751,10 +755,12 @@ async function askQuestions(){
     $("#qretry").onclick = () => { S.qsPromise = null; $("#qcard").innerHTML = loadCard("❓ One more try…"); askQuestions(); }; return;
   }
   const { questions, learn_topic } = qd; S.questions = questions; S.learnTopic = learn_topic;
+  S.quitQuiz = false;
   const learnP = learn_topic ? post("/api/learn", { topic: learn_topic, title: S.book.title }).catch(() => null) : Promise.resolve(null);
   $("#quiz").hidden = false;
   let right = 0; S.answers = [];
   for (let i = 0; i < questions.length; i++) {
+    if (S.quitQuiz) return;
     const q = questions[i]; quizCard(i, questions.length, q); S.skipQ = false; S.silent = 0;
     S.sayTarget = "#qsay"; S.heardTarget = "#qheard";
     let verdict = "not_yet", action = "hint_retry";
@@ -817,6 +823,7 @@ async function askQuestions(){
     S.answers.push({ kind: q.kind, verdict, word: q.word || "" });
   }
   S.sayTarget = null; S.heardTarget = null;
+  if (S.quitQuiz) return;
   $("#comp").textContent = `${right}/${questions.length}`;
   $("#qcard").innerHTML = `<div class="rhead"><div class="stars">${"⭐".repeat(Math.max(1, right))}${"☆".repeat(questions.length - right)}</div><h2>Putting your report card together…</h2><span class="spinner"></span></div>`;
   const [learn, sess] = await Promise.all([learnP,
@@ -947,6 +954,19 @@ async function makeStory(sequel = false){
   S.book = j; showBook();
 }
 $("#makestory").onclick = () => { S.idea = ""; makeStory(false); };
+function goHome(){
+  S.skipQ = true; S.quitQuiz = true; S.abortListen && S.abortListen();       // stop a running quiz
+  stopListen(); speechSynthesis.cancel(); clearTimeout(S.autoDone);
+  if (reader && reader.st.on) stopReading();
+  S.finishing = false; S.sayTarget = null; S.heardTarget = null;
+  $("#quiz").hidden = true; $("#qcard").innerHTML = ""; $("#parent").hidden = true; $("#wordpop").hidden = true;
+  $("#book").hidden = true; $("#chooser").hidden = false; $("#langbar").hidden = false;
+  $("#controls").innerHTML = ""; $("#loading").innerHTML = ""; $("#heard").textContent = "";
+  document.body.classList.remove("mic-on"); window.scrollTo({ top: 0, behavior: "smooth" });
+  loadProfile();
+  $("#say").innerHTML = `Hi ${LEARNER()}! 🦉 Do you want to <b>read a book</b>, or <b>make your own story</b>?`;
+}
+["#homebtn", "#homelogo", "#homelink"].forEach(id => $(id).onclick = goHome);
 function freshStory(){                 // a brand-new story (not a sequel); her practice words are woven in automatically
   stopListen(); S.book = null; S.storyFiles = []; S.storyImgs = []; S.idea = ""; $("#thumbs").innerHTML = ""; $("#idea").value = "";
   $("#book").hidden = true; $("#chooser").hidden = false; $("#langbar").hidden = false; $("#controls").innerHTML = ""; loadProfile();
