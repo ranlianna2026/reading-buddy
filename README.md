@@ -16,14 +16,10 @@ npm run dev            # http://localhost:5320
 
 Open it in **Chrome or Edge** and allow the microphone — reading aloud is recognised in the browser.
 
-The Celeris key is checked in (`wrangler.json` → `vars.AI_API_KEY`) on purpose, so a clone just runs.
-Everything else is a secret. For Fig's real voice, put your ElevenLabs key in `.dev.vars`:
-
-```sh
-cp .dev.vars.example .dev.vars   # ELEVENLABS_API_KEY=sk_…
-```
-
-Without it, Fig falls back to the browser's own speech synthesis, so the app still works end to end.
+Both keys are checked in on purpose (`wrangler.json` → `vars`): `AI_API_KEY` for Celeris and
+`ELEVENLABS_API_KEY` for the voice, so a clone runs and speaks with nothing to set up. If the voice
+key is ever removed, Fig falls back to the browser's own speech synthesis and the app still works end
+to end.
 
 ## The loop
 
@@ -128,7 +124,6 @@ Already made on the account:
 Before the first deploy (not done yet):
 
 ```sh
-npx wrangler secret put ELEVENLABS_API_KEY
 npx wrangler d1 migrations apply reading-buddy --remote
 npm run deploy
 ```
