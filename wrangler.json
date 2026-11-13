@@ -16,7 +16,7 @@
     "VOICE_ID": "zmcVlqmyk3Jpn5AVYcAL",
     "VOICE_MODEL": "eleven_turbo_v2_5",
     "IMAGE_MODEL": "muse-image-1.0",
-    "AI_IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell",
+    "AI_IMAGE_MODEL": "@cf/bytedance/stable-diffusion-xl-lightning",
     "PRODUCT_NAME": "Reading Buddy"
   },
   "d1_databases": [

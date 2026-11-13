@@ -237,7 +237,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
       <Screen id="page-read">
         <TopNav left={<span className="text-lg font-medium">Hi {kid.name}</span>} right={<Crumbs kid={kid} />} />
         <Focus intro={stage}>
-          <Buddy mood={busy ? "think" : "hi"} size={170} className="breathe" />
+          <Buddy mood={busy ? "think" : "cheer"} size={120} className="breathe" />
           <h1 className="text-3xl">What shall we read today?</h1>
           <form
             className="flex w-full flex-col gap-3"

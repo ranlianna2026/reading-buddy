@@ -19,11 +19,15 @@ export function promptFor(title: string, page: string, kind: string, cast = "", 
     `An illustration for one page of the children's story "${title}", in ${STYLES[kind] ?? STYLES.book}. ` +
     (cast ? `Characters and setting: ${cast.slice(0, 400)}. ` : "") +
     `Show this moment: ${page.slice(0, 600)} ` +
-    "Gentle and friendly for young children. The picture must contain no text of any kind: no words, " +
-    "no letters, no numbers, no title, no caption, no signature. " +
+    "Gentle and friendly for young children, richly detailed, soft natural light, clean composition. " +
+    "A wordless picture: nothing written anywhere in it." +
     (avoid ? ` A child said the last picture for this page was wrong (${avoid}); fix that.` : "")
   );
 }
+
+// Models will letter a picture unless told not to; this is the half of the instruction they listen to.
+const NOT = "text, words, letters, numbers, title, caption, subtitle, watermark, signature, logo, " +
+  "speech bubble, handwriting, book cover text, frame, border, blurry, deformed, extra limbs";
 
 async function keyOf(parts: string) {
   const hash = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(parts));
@@ -57,8 +61,15 @@ async function draw(prompt: string, reference: string) {
   }
 
   const ai = env.AI as unknown as { run: (model: string, input: unknown) => Promise<ReadableStream | { image?: string }> };
-  const made = await ai.run(env.AI_IMAGE_MODEL || "@cf/black-forest-labs/flux-1-schnell", { prompt: prompt.slice(0, 2000), steps: 4 });
-  if (made instanceof ReadableStream) return { bytes: new Uint8Array(await new Response(made).arrayBuffer()), type: "image/jpeg" };
+  const model = env.AI_IMAGE_MODEL || "@cf/bytedance/stable-diffusion-xl-lightning";
+  const flux = model.includes("flux");
+  const made = await ai.run(
+    model,
+    flux
+      ? { prompt: prompt.slice(0, 2000), steps: 4 }
+      : { prompt: prompt.slice(0, 2000), negative_prompt: NOT, width: 1024, height: 1024, num_steps: 20, guidance: 7.5 }
+  );
+  if (made instanceof ReadableStream) return { bytes: new Uint8Array(await new Response(made).arrayBuffer()), type: flux ? "image/jpeg" : "image/png" };
   if (made.image) return { bytes: Uint8Array.from(atob(made.image), (letter) => letter.charCodeAt(0)), type: "image/jpeg" };
   throw new Refusal("No picture came back.", 502);
 }
@@ -66,7 +77,7 @@ async function draw(prompt: string, reference: string) {
 export async function picture(opts: { title: string; page: string; kind: string; cast?: string; reference?: string; avoid?: string }) {
   const kind = opts.reference ? opts.kind : "new";
   const prompt = promptFor(opts.title, opts.page, kind, opts.cast, opts.avoid);
-  const name = `pictures/${await keyOf(`${(opts.reference ?? "").slice(0, 4000)}|${opts.page}|${kind}|${opts.cast ?? ""}`)}.jpg`;
+  const name = `pictures/${await keyOf(`${(opts.reference ?? "").slice(0, 4000)}|${prompt}|${kind}`)}.img`;
   const had = await env.FILES.get(name);
   if (had) return { url: `/api/picture/${encodeURIComponent(name)}`, cached: true };
   const made = await draw(prompt, opts.reference ?? "");

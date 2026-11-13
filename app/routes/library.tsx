@@ -31,7 +31,7 @@ export default function Library({ loaderData }: Route.ComponentProps) {
   const { kid, read } = loaderData;
   return (
     <Screen id="page-library">
-      <TopNav left={<span className="text-lg font-medium">Stories</span>} right={<Crumbs kid={kid} />} />
+      <TopNav width="max-w-[1100px]" left={<span className="text-lg font-medium">Stories</span>} right={<Crumbs kid={kid} />} />
       <main className="mx-auto w-full max-w-[1100px] flex-1 px-5 pb-6">
         <div className="mb-6 flex items-center gap-4">
           <Buddy mood="hi" size={100} className="breathe" />
