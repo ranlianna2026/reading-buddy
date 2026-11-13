@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { post } from "~/lib/api";
+import { Modal } from "./modal";
 import { hush } from "~/lib/talk";
 
 type Voice = { id: string; name: string; gender: string; kind: string; mine: boolean; preview: string };
@@ -210,26 +211,16 @@ function Clone({ onClose, onDone }: { onClose: () => void; onDone: (name: string
 }
 
 function Sheet({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  useEffect(() => {
-    const escape = (event: KeyboardEvent) => event.key === "Escape" && onClose();
-    addEventListener("keydown", escape);
-    return () => removeEventListener("keydown", escape);
-  }, []);
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-end bg-black/50 sm:place-items-center sm:p-6" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
-      <div
-        className="pop card flex max-h-[90svh] w-full max-w-md flex-col overflow-y-auto rounded-b-none p-6 text-left sm:rounded-[28px]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <h3 className="text-xl">{title}</h3>
-          <button onClick={onClose} aria-label="Close" className="text-3xl leading-none text-muted">
-            ×
-          </button>
-        </div>
-        {children}
+    <Modal label={title} onClose={onClose} z={60}>
+      <div className="flex items-center justify-between gap-4">
+        <h3 className="text-xl">{title}</h3>
+        <button onClick={onClose} aria-label="Close" className="text-3xl leading-none text-muted">
+          ×
+        </button>
       </div>
-    </div>
+      {children}
+    </Modal>
   );
 }
 

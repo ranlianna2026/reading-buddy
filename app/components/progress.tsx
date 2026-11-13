@@ -4,6 +4,7 @@ import { useNavigate, useRevalidator } from "react-router";
 
 import { post, send } from "~/lib/api";
 import { Flame, Heart, Star } from "./icons";
+import { Modal } from "./modal";
 import { ThemePick } from "./theme-pick";
 import { VoiceRow } from "./voices";
 
@@ -36,9 +37,6 @@ export function Progress({ onClose }: { onClose: () => void }) {
       .then(async (res) => (res.ok ? ((await res.json()) as Settings) : Promise.reject(new Error(await res.text()))))
       .then(setData)
       .catch((problem: Error) => setError(problem.message));
-    const escape = (event: KeyboardEvent) => event.key === "Escape" && onClose();
-    addEventListener("keydown", escape);
-    return () => removeEventListener("keydown", escape);
   }, []);
 
   const save = async (change: Partial<Settings["kid"]>) => {
@@ -70,17 +68,7 @@ export function Progress({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/50 p-4 sm:p-6"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Your progress"
-      onClick={onClose}
-    >
-      <div
-        className="pop card my-auto flex max-h-[88svh] w-full max-w-lg flex-col gap-5 overflow-y-auto p-6 text-left"
-        onClick={(event) => event.stopPropagation()}
-      >
+    <Modal label="Your progress" onClose={onClose}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl">{data ? `${data.kid.name}'s progress` : "Your progress"}</h2>
@@ -157,8 +145,7 @@ export function Progress({ onClose }: { onClose: () => void }) {
             {saved && <p className="text-sm text-leaf-ink">Saved.</p>}
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }
 
