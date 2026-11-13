@@ -61,6 +61,8 @@ _TOPIC = {
           r"\b(?:cuento|historia|libro) (?:sobre|acerca de|donde) (.+)|^(?:¿\s*)?(?:cómo|por qué) (.+)",
     "fr": r"(?:apprendre|savoir|découvrir|raconte-moi|explique-moi)(?: tout)? (?:sur|à propos de|des|du|de la|comment|pourquoi) (.+)|"
           r"\b(?:histoire|livre|conte) (?:sur|à propos de|où) (.+)|^(?:comment|pourquoi) (.+)",
+    "ar": r"(?:أتعلم|اتعلم|أعرف|اعرف|علمني|علّمني|أخبرني|اخبرني|احك لي|احكي لي|قصة|قصه|كتاب|حكاية)\s*(?:عن|حول|عن كيف) (.+)|"
+          r"^(?:لماذا|كيف|ما هو|ما هي|ماذا) (.+)",
     "zh": r"(?:关于|讲讲|讲一讲|了解|学习|想知道|告诉我)(.+)|^(?:为什么|怎么|什么是)(.*)",
 }
 _LEAD = re.compile(r"^(?:i'?m going to read|i want to read|i wanna read|let'?s read|i'?m reading|can we read|read)\s+", re.I)
@@ -82,7 +84,7 @@ def cast_of(plan):
     return f"{plan.get('characters', '')}. Setting: {plan.get('setting', '')}"
 
 
-FACTS = {"en": "facts for kids", "es": "datos para niños", "fr": "pour les enfants", "zh": "儿童 知识"}
+FACTS = {"en": "facts for kids", "es": "datos para niños", "fr": "pour les enfants", "zh": "儿童 知识", "ar": "معلومات للأطفال"}
 
 
 def create_story(images, idea, level, practice_words=(), lang="en", kind="idea"):

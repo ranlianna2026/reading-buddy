@@ -38,6 +38,9 @@ BUILTIN = {
     "狐狸和葡萄": {"title": "狐狸和葡萄", "author": "伊索", "source": "https://www.gutenberg.org/ebooks/21", "lang": "zh",
         "text": "一只狐狸肚子很饿。它看见架子上挂着一串串熟透的葡萄。它跳了又跳，可是怎么也够不着。最后它走开了，"
                 "还说：“这些葡萄是酸的，我才不想吃呢！”"},
+    "الثعلب والعنب": {"title": "الثعلب والعنب", "author": "إيسوب", "source": "https://www.gutenberg.org/ebooks/21", "lang": "ar",
+        "text": "كان ثعلب جائعا جدا. رأى عنقودا من العنب الناضج معلقا على شجرة عالية. قفز وقفز، لكنه لم يستطع أن "
+                "يصل إليه. في النهاية مشى بعيدا وقال: «هذا العنب حامض، لا أريده!»"},
     "the fox and the grapes": {
         "title": "The Fox and the Grapes", "author": "Aesop (tr. George Fyler Townsend)",
         "source": "https://www.gutenberg.org/ebooks/21",
@@ -243,7 +246,7 @@ def clean_typography(raw):
     return (text, round(ratio, 3)) if ratio >= 0.95 else (raw, round(ratio, 3))
 
 
-LANG_HINT = {"en": "", "es": "español", "fr": "français", "zh": "中文"}
+LANG_HINT = {"en": "", "es": "español", "fr": "français", "zh": "中文", "ar": "العربية"}
 
 
 def get_passage(title, part=0, lang="en"):

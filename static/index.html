@@ -35,6 +35,9 @@
   .book-title { font-size:15px; color:var(--muted); margin:2px 0 10px; }
   .book-title b { color:var(--ink); font-size:20px; }
   .passage { font-family: Georgia, "Iowan Old Style", serif; font-size:27px; line-height:1.75; letter-spacing:.2px; }
+  /* Arabic: letters must stay joined (no letter-spacing) and need an Arabic font */
+  [dir=rtl] .passage, [dir=rtl].qcard .qtext, [dir=rtl].qcard .opt { letter-spacing:0 !important; font-family:"Noto Naskh Arabic", "Geeza Pro", "Damascus", Tahoma, sans-serif !important; }
+  [dir=rtl] .passage { line-height:1.9; }
   .passage span { border-radius:6px; padding:1px 2px; transition: background .3s; }
   .passage .misread { background:var(--warn-soft); border-bottom:3px solid var(--warn); }
   .passage .skipped { color:var(--skip); text-decoration: line-through; text-decoration-color: var(--warn); }
@@ -227,7 +230,7 @@
 </header>
 <main>
   <section class="card">
-    <div class="buddy" id="buddy"><div class="face">🦉</div><div class="bubble" id="say">Hi! I'm Buddy 🦉 Do you want to <b>read a book</b>, or <b>make your own story</b>?</div></div>
+    <div class="buddy" id="buddy"><div class="face">🦉</div><div class="bubble" id="say" dir="auto">Hi! I'm Buddy 🦉 Do you want to <b>read a book</b>, or <b>make your own story</b>?</div></div>
     <div class="heard" id="heard"></div>
     <div class="langbar" id="langbar"></div>
     <div id="chooser" class="choices">
@@ -297,7 +300,7 @@
   <div class="qcard" id="qcard"></div>
 </div>
 <footer>Built with Meta Muse Spark (reading, questions, stories) · Muse Image (pictures) · Keenable (books &amp; facts) · speech runs in your browser · books from Project Gutenberg (public domain)</footer>
-<script src="/static/i18n.js"></script>
+<script src="/static/i18n.js?v=ar1"></script>
 <script>
 const $ = s => document.querySelector(s);
 const S = { book:null, qsPromise:null, questions:[], score:null, results:[], learnTopic:"", storyImgs:[], storyFiles:[], idea:"" };
@@ -306,6 +309,9 @@ S.lang = localStorage.getItem("rb_lang") || "en";
 const BL = () => (S.book && S.book.lang) || S.lang;                      // language of the open book
 const CJK = () => LANGS[BL()].cjk, SEP = () => (CJK() ? "" : " ");
 const toks = t => (CJK() ? (t.match(/[\u3400-\u9fff\uf900-\ufaff]|[^\s\u3400-\u9fff\uf900-\ufaff]+/g) || []) : t.split(/\s+/).filter(Boolean));
+// same folding as rb/lang.py norm(): accents and Arabic short-vowel marks dropped, Arabic spelling variants unified
+const fold = t => t.toLowerCase().normalize("NFKD").replace(/\p{M}/gu, "").replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").replace(/ـ/g, "");
+const RTL = () => !!LANGS[BL()].rtl;
 const UNIT = () => (CJK() ? "characters" : "words");
 function renderLangs(){
   $("#langbar").innerHTML = "🌐 Story language: " + Object.entries(LANGS).map(([k, v]) => `<button data-lang="${k}" class="${k === S.lang ? "on" : ""}">${v.label}</button>`).join("");
@@ -388,7 +394,7 @@ function stopReading(){ const {st, r} = reader; st.on = false; try { r.stop(); }
 // ---------- storybook rendering (one page at a time; word spans keep one global index for scoring) ----------
 function pageTexts(b){
   if (b.pages && b.pages.length) return b.pages.map(p => p.text.trim());
-  const sents = b.text.match(/[^.!?]+[.!?]+["”’']?|[^.!?]+$/g) || [b.text], out = []; let cur = "";
+  const sents = b.text.match(/[^.!?؟]+[.!?؟]+["”’'»]?|[^.!?؟]+$/g) || [b.text], out = []; let cur = "";
   for (const x of sents) { cur += x; if (toks(cur).length >= (CJK() ? 60 : 35)) { out.push(cur.trim()); cur = ""; } }
   if (cur.trim()) out.push(cur.trim());
   return out;
@@ -493,7 +499,7 @@ async function planPictures(){
 const pageOf = i => S.pages.findIndex(p => i >= p.start && i < p.end);
 $("#prev").onclick = () => { stopListen(); showPage(S.page - 1); };
 $("#next").onclick = () => { stopListen(); showPage(S.page + 1); };
-const norm = w => w.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}']/gu, "");
+const norm = w => fold(w).replace(/[^\p{L}\p{N}']/gu, "");
 function markReached(heard){       // live progress: greedy forward match of heard words; turn the page when the child gets there
   const spans = [...document.querySelectorAll("#passage span")], ref = spans.map(s => norm(s.textContent));
   let i = 0; for (const h of toks(heard).map(norm).filter(Boolean)) {
@@ -564,6 +570,8 @@ function showBook(){
     if (b.request === "book") $("#src").innerHTML = `✨ "${esc(b.asked)}" isn't on my shelf, so Buddy wrote a new story like it · ` + $("#src").innerHTML;
     if (b.request === "topic") $("#src").innerHTML = `🌍 A story to learn about "${esc(b.asked)}" · ` + $("#src").innerHTML;
   }
+  const dir = RTL() ? "rtl" : "ltr";
+  [".page", "#booktitle", "#qcard"].forEach(sel => $(sel).dir = dir);
   renderPassage(); resetSide();
   S.qsPromise = post("/api/questions", { passage: b.text, learner: LEARNER() });          // prepare questions while the child reads
   $("#controls").innerHTML = `<button class="big rec" id="readbtn">Start reading 🎤</button>`;
@@ -631,16 +639,16 @@ function quizCard(i, n, q){
   $("#qskip").onclick = () => { S.skipQ = true; speechSynthesis.cancel(); S.abortListen && S.abortListen(); };
 }
 function pickByVoice(said, q){
-  const t = " " + said.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N} ]/gu, " ") + " ";
+  const t = " " + fold(said).replace(/[^\p{L}\p{N} ]/gu, " ") + " ";
   const ord = [/\b(a|first|one|1)\b/, /\b(b|second|two|2)\b/, /\b(c|third|three|3)\b/];
   let best = -1, score = 0;
   q.choices.forEach((c, k) => {
-    const cn = c.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N} ]/gu, " ");
+    const cn = fold(c).replace(/[^\p{L}\p{N} ]/gu, " ");
     const ws = CJK() ? [...cn.replace(/\s/g, "")] : cn.split(/\s+/).filter(w => w.length > 2);
     const hit = ws.filter(w => CJK() ? t.includes(w) : t.includes(" " + w)).length / Math.max(1, ws.length); if (hit > score) { score = hit; best = k; } });
   if (score >= 0.5) return best;
-  if (/\b(second|segunda?|deuxieme|seconde)\b|第二/.test(t)) return 1; if (/\b(third|last|tercera?|ultima?|troisieme|derniere?)\b|第三|最后/.test(t)) return 2;
-  if (/\b(first|primera?|premiere?)\b|第一/.test(t)) return 0;
+  if (/\b(second|segunda?|deuxieme|seconde)\b|第二| (الثاني|ثاني|الثانيه|ب) /.test(t)) return 1; if (/\b(third|last|tercera?|ultima?|troisieme|derniere?)\b|第三|最后| (الثالث|ثالث|الثالثه|الاخير|الاخيره|ج) /.test(t)) return 2;
+  if (/\b(first|primera?|premiere?)\b|第一| (الاول|اول|الاولي|ا) /.test(t)) return 0;
   const tok = t.trim().split(/\s+/); if (tok.length <= 2) { const k = ord.findIndex(r => r.test(tok[tok.length - 1])); if (k >= 0) return k; }
   return -1;
 }
