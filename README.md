@@ -37,7 +37,7 @@ to end.
 5. **Remember.** The report, the words to practise and what Fig learned about the child go to D1 and
    to the memory bucket, so the next story is written knowing them.
 
-Every story is a book: a real title, a cover drawn in pixel art seeded from that title, and the
+Every story is a book: a real title, an illustration drawn for it, and the
 child's name on it. The same art animates beside the passage while they read.
 
 ## Layout
@@ -60,17 +60,15 @@ child's name on it. The same art animates beside the passage while they read.
 | `app/components/buddy.tsx` | Fig. One SVG, five moods: hi, listen, cheer, think, sad |
 | `app/components/chrome.tsx` | Top nav, bottom nav, hearts, stars, streak, the meter, the action bar |
 | `app/components/passage.tsx` | The story, word by word: read, missed, and the quote being cited |
-| `app/lib/pixel.ts` | The pixel canvas: OKLCH to sRGB, ramps, Bayer dither, cumulus and canopy brushes |
-| `app/lib/scenery.ts` | The six places, painted pixel by pixel, and Fig in them |
 | `app/lib/languages.ts` | Forty languages, their own names and their speech tags |
 | `app/lib/grades.ts` | Pre-K to 6th grade: the age, the starting level, the words-a-minute norm |
 | `app/lib/quiz.ts` | The quiz model: difficulty by level, code-checked options, answering by voice |
 | `app/lib/report.ts` | The reading score: speed, fluency and understanding compiled into one number |
 | `app/components/quiz.tsx` | The quiz: tap or say, two tries, a hint, the quote, and an appeal |
 | `app/components/score.tsx` | The reading score on the profile: the dial and where it came from |
-| `app/components/scene.tsx` | The scene on a canvas, drawn once from the book's seed |
+| `app/lib/picture.server.ts` | The picture model: Muse Image styles, prompts and reference edits, cached in R2 |
 | `app/components/cover.tsx` | A book: spine, letterpress title, chapter rule, the art, the byline |
-| `app/components/hero.tsx` | The opening: a wide pixel scene behind the first screen |
+| `app/components/hero.tsx` | The opening: the illustrated scene behind the first screen |
 | `app/components/voices.tsx` | Voice: female, male, every voice model and id, and cloning your own |
 | `legacy-python/` | The first Reading Buddy, FastAPI and Gutenberg. Kept for its scoring and prompts |
 
@@ -88,26 +86,6 @@ vision and it is the most forgiving face a new reader can sound out.
 The shape is from [otterspeak](https://github.com/brandonmlicea/otterspeak): a top nav that holds only
 what matters right now (quit, the meter, the hearts), a bottom nav of three tabs, chunky buttons with a
 hard shadow a child can hit, and one job centred on the screen at a time.
-
-## The scene
-
-Every story is painted beside it, and again on its cover. `app/lib/pixel.ts` is a small pixel canvas —
-OKLCH straight to sRGB, colour ramps, a 4×4 Bayer dither, and two brushes that do most of the work: a
-cumulus built from stacked discs (shadow, body, lit crown, rim) and a canopy built the same way.
-`app/lib/scenery.ts` composes the six places out of it: dithered skies that never band, rolling land
-with a lit crest, volumetric clouds, sun glitter on water, starfields, moon dust and craters, a
-textured trunk with an overhead canopy, and a silhouette fringe in the foreground so the frame has
-depth. Fig is drawn in the same pixels, planted on the ground with a contact shadow.
-
-The seed comes from the child and the book, so a story always looks like itself: it places the sun,
-rolls the hills, stands the trees, scatters the stars and decides where Fig stands and how big he is.
-Nothing moves — it is a painting.
-
-The frame and the book card are reverse-engineered from
-[cofounder.co](https://cofounder.co): the chapter plate is a two-pixel border with an eight-pixel mat
-around a rounded plate; the book is a cream card with a spine gradient down its left edge, a
-letterpress title over a hairline rule, an IBM Plex Mono chapter label, the art inset, and a mono
-footer carrying the byline and the reading.
 
 ## The quiz
 
@@ -151,7 +129,7 @@ report card at the end of a story, and is stored per reading in D1.
 
 ## Pictures
 
-Beside the pixel scene, every story gets a painted page. `app/lib/picture.server.ts` is the Python
+Every story is illustrated. `app/lib/picture.server.ts` is the Python
 app's Muse Image step in TypeScript: the same four styles (`book`, `story`, `series`, `new`), the same
 prompt, and the same reference-edit flow — with a reference it calls `/images/edits` so a book's pages
 keep the same characters and look, without one it calls `/images/generations` and that first picture
@@ -159,8 +137,9 @@ becomes the reference. It draws with Muse Image when `MODEL_API_KEY` is set and 
 otherwise, so a picture always arrives. Results are cached in R2 by reference, text and kind, and
 served back from `/api/picture`.
 
-It is additive: the seeded pixel scene draws instantly and stays on the page under the painting, and
-it is still what the book covers are made of.
+It is the art of the whole product: the page beside the story, the cover on the shelf, and the scene
+behind the opening screen. A book that has not been written yet has no picture, so its cover carries
+its own initial on a tinted panel rather than wait on the model.
 
 ## Languages
 

@@ -1,14 +1,12 @@
 import { Link } from "react-router";
 
-import { Scene, type Place } from "./scene";
-
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 
 export function Cover({
   title,
   by,
-  seed,
-  place,
+  picture,
+  seed = 0,
   label,
   note,
   to,
@@ -16,8 +14,8 @@ export function Cover({
 }: {
   title: string;
   by?: string;
-  seed: number;
-  place: Place;
+  picture?: string;
+  seed?: number;
   label?: string;
   note?: string;
   to?: string;
@@ -36,7 +34,11 @@ export function Cover({
           </div>
           <p className="mono mt-2.5 px-4 text-muted">{label ?? (n ? `Story ${ROMAN[(n - 1) % 12]}` : "A story")}</p>
           <div className="mt-3 px-4">
-            <Scene seed={seed} place={place} w={150} h={132} className="rounded-sm" alt={`${title}, drawn`} />
+            {picture ? (
+              <img src={picture} alt={`${title}, illustrated`} className="block aspect-[7/6] w-full rounded-sm object-cover" />
+            ) : (
+              <Blank title={title} seed={seed} />
+            )}
           </div>
           <div className="mono mt-auto flex items-center justify-between px-4 pt-3.5 pb-3.5 text-muted">
             <span>{by ? `by ${by}` : "unwritten"}</span>
@@ -52,5 +54,22 @@ export function Cover({
     </Link>
   ) : (
     book
+  );
+}
+
+// Before a story is written there is no picture yet, so the cover carries its own initial.
+function Blank({ title, seed }: { title: string; seed: number }) {
+  const hue = 30 + (seed % 12) * 28;
+  return (
+    <div
+      aria-hidden
+      className="grid aspect-[7/6] w-full place-items-center rounded-sm"
+      style={{
+        background: `linear-gradient(160deg, oklch(0.9 0.06 ${hue}), oklch(0.82 0.08 ${(hue + 40) % 360}))`,
+        color: `oklch(0.38 0.1 ${hue})`,
+      }}
+    >
+      <span className="text-4xl font-medium">{title.trim().charAt(0).toUpperCase()}</span>
+    </div>
   );
 }

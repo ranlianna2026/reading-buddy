@@ -23,6 +23,7 @@ export async function action({ request }: Route.ActionArgs) {
       asked: count(body.asked, 0, 10, 0),
       correct: count(body.correct, 0, 10, 0),
       seconds: count(body.seconds, 0, 7200, 0),
+      picture: text(body.picture, 200),
       place: text(body.place, 12) || "meadow",
       seed: Math.abs(Math.round(Number(body.seed))) % 4294967295 || 0,
       detail: body.detail ?? null,

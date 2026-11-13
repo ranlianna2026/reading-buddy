@@ -8,7 +8,6 @@ import { Mic } from "~/components/mic";
 import { Cover } from "~/components/cover";
 import { Passage } from "~/components/passage";
 import { Quiz, type Answer } from "~/components/quiz";
-import { Scene, type Place } from "~/components/scene";
 import { post } from "~/lib/api";
 import { userOf } from "~/lib/auth.server";
 import { gradeOf } from "~/lib/grades";
@@ -23,7 +22,15 @@ import type { Route } from "./+types/read";
 
 export const meta = () => [{ title: "Read · Reading Buddy" }];
 
-type Story = { title: string; passage: string; place: Place; seed: number; by: string; topic: string; stretch: string[]; words: number; level: number };
+function Arrow() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+type Story = { title: string; passage: string; place: string; seed: number; by: string; topic: string; stretch: string[]; words: number; level: number };
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await userOf(request);
@@ -193,6 +200,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
         score: aloud ? compile({ wcpm: result.wcpm, accuracy: result.accuracy, comprehension }, kid.grade).score : 0,
         practiceWords: result.practiceWords,
         notes: praise.notes,
+        picture: drawn,
         place: story.place,
         seed: story.seed,
         finished: result.finished,
@@ -272,28 +280,26 @@ export default function Read({ loaderData }: Route.ComponentProps) {
           <aside className="order-first w-full shrink-0 md:order-last md:sticky md:top-24 md:w-60">
             <div className="plate">
               {drawn ? (
-                <img src={drawn} alt={`${story.title}, painted`} className="block w-full rounded-lg" />
+                <img src={drawn} alt={`${story.title}, illustrated`} className="block w-full rounded-lg" />
               ) : (
-                <Scene seed={story.seed} place={story.place} w={150} h={190} className="rounded-lg" alt={`${story.title}, drawn`} />
+                <div className="grid aspect-[4/5] w-full place-items-center rounded-lg bg-sunk">
+                  <span className="mono text-muted">drawing…</span>
+                </div>
               )}
             </div>
-            {drawn && (
-              <div className="plate mt-2">
-                <Scene seed={story.seed} place={story.place} w={150} h={96} className="rounded-lg" alt={`${story.title}, drawn`} />
-              </div>
-            )}
-            <p className="mono mt-2 text-center text-muted">{drawn ? "painted for this story" : story.place}</p>
+            <p className="mono mt-2 text-center text-muted">{drawn ? story.place : "one moment"}</p>
           </aside>
         </main>
         <ActionBar>
-          <Mic on={listening} onClick={listening ? stopReading : startReading} label={listening ? "I'm done" : "Read to Fig"} />
+          <Mic on={listening} onClick={listening ? stopReading : startReading} label={listening ? "I'm done" : "Read out-loud"} />
           {!listening && (
             <>
               <button className="btn btn-quiet" onClick={figAt === undefined ? figReads : () => { hush(); setFigAt(undefined); }}>
-                {figAt === undefined ? "Fig reads first" : "Stop Fig"}
+                {figAt === undefined ? "Read to me" : "Stop"}
               </button>
-              <button className="btn btn-sun" onClick={quizOnly}>
-                I finished the book
+              <button className="btn btn-sun gap-2 px-5" onClick={quizOnly} aria-label="Finished reading — go to the questions">
+                <Arrow />
+                <Arrow />
               </button>
             </>
           )}
@@ -336,7 +342,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-6">
         <div className="mb-6 flex justify-center">
           <div className="w-60">
-            <Cover title={story.title} by={story.by} seed={story.seed} place={story.place} note="just read" />
+            <Cover title={story.title} by={story.by} picture={drawn} seed={story.seed} note="just read" />
           </div>
         </div>
         {result && <After title={story.title} score={result} report={report} grade={kid.grade} again={() => setStage("pick")} home={() => go("/me")} />}

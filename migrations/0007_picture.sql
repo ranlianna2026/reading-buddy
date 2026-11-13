@@ -1,0 +1,1 @@
+ALTER TABLE readings ADD COLUMN picture TEXT NOT NULL DEFAULT '';

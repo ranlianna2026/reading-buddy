@@ -1,31 +1,39 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 
-import { paint, PLACES, type Place } from "~/lib/scenery";
+const SCENE =
+  "A friendly little green dragon sits on a grassy hill at golden hour with a big open storybook on his lap, " +
+  "soft clouds behind him, wildflowers around him, waiting for a child to come and read with him.";
 
-export function Hero({ seed, place }: { seed: number; place: Place }) {
-  const board = useRef<HTMLCanvasElement>(null);
+export function Hero() {
+  const [painted, setPainted] = useState("");
 
   useEffect(() => {
-    const ink = board.current?.getContext("2d");
-    if (ink) ink.putImageData(paint(seed >>> 0, PLACES.includes(place) ? place : "meadow", 420, 272), 0, 0);
-  }, [seed, place]);
+    let alive = true;
+    fetch("/api/picture", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Reading Buddy", page: SCENE, kind: "new" }),
+    })
+      .then((res) => (res.ok ? (res.json() as Promise<{ url: string }>) : Promise.reject(new Error("no picture"))))
+      .then((made) => alive && setPainted(made.url))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <canvas
-        ref={board}
-        width={420}
-        height={272}
-        className="h-full w-full"
-        style={{ objectFit: "cover", imageRendering: "pixelated" }}
-      />
+      {painted && <img src={painted} alt="" className="h-full w-full object-cover" />}
       <div
         className="absolute inset-0"
         style={{
-          background: [
-            "linear-gradient(to bottom, color-mix(in oklab, var(--rb-page) 12%, transparent) 0%, color-mix(in oklab, var(--rb-page) 52%, transparent) 36%, color-mix(in oklab, var(--rb-page) 88%, transparent) 70%, var(--rb-page) 100%)",
-            "radial-gradient(120% 80% at 50% 45%, transparent 40%, color-mix(in oklab, var(--rb-page) 70%, transparent) 100%)",
-          ].join(", "),
+          background: painted
+            ? [
+                "linear-gradient(to bottom, color-mix(in oklab, var(--rb-page) 14%, transparent) 0%, color-mix(in oklab, var(--rb-page) 54%, transparent) 36%, color-mix(in oklab, var(--rb-page) 88%, transparent) 70%, var(--rb-page) 100%)",
+                "radial-gradient(120% 80% at 50% 45%, transparent 40%, color-mix(in oklab, var(--rb-page) 70%, transparent) 100%)",
+              ].join(", ")
+            : "radial-gradient(120% 90% at 50% 20%, var(--rb-leaf-soft) 0%, var(--rb-page) 70%)",
         }}
       />
     </div>
