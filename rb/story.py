@@ -83,13 +83,27 @@ def classify_request(text, lang="en"):
 FACTS = {"en": "facts for kids", "es": "datos para niños", "fr": "pour les enfants", "zh": "儿童 知识", "ar": "معلومات للأطفال"}
 
 
-def create_story(images, idea, level, practice_words=(), lang="en", kind="idea", prefs=None):
+def for_age(age):
+    """What a story for this child's age should feel like (the reading level separately sets length and sentences)."""
+    if not age:
+        return ""
+    feel = ("very simple, cozy and playful: repetition, sounds and silly surprises, a gentle problem" if age <= 5 else
+            "funny and warm: a clear adventure, friendship, a small brave moment" if age <= 7 else
+            "an exciting adventure or mystery with a clever solution and real-world curiosity" if age <= 9 else
+            "a richer adventure with a smart hero, humor and a twist, without being babyish")
+    a = "an" if age in (8, 11, 18) else "a"
+    return (f"The reader is {age} years old. Write for {a} {age}-year-old: {feel}. Pick a hero, humor and ideas "
+            f"{a} {age}-year-old loves, and nothing too scary or too grown-up for that age.")
+
+
+def create_story(images, idea, level, practice_words=(), lang="en", kind="idea", prefs=None, age=None):
     spec = spec_for(level, lang)
     lname = L.get(lang)["name"] + (" — Simplified characters only" if lang == "zh" else "")
     said = ({"topic": f"A child asked to learn about: \"{idea}\".",
              "book": f"A child asked to read: \"{idea}\"."}.get(kind)
             or f"A child made these pictures and said this idea out loud: \"{idea or '(no idea given)'}\".")
-    plan = chat_json(SYSTEM, f"{said} Plan a story from it. {KIND_NOTE[kind]} {ENGAGING}", PLAN, "plan", images=images)
+    plan = chat_json(SYSTEM, f"{said} Plan a story from it. {KIND_NOTE[kind]} {ENGAGING} {for_age(age)}", PLAN, "plan",
+                     images=images)
     # no drawing from the child: start the cover picture now, in parallel with writing the story (~15 s saved)
     cover = None
     if not images:
@@ -108,7 +122,7 @@ def create_story(images, idea, level, practice_words=(), lang="en", kind="idea",
     fact_txt = "\n".join(f"[{i}] {f.snippet}" for i, f in enumerate(facts)) or "(none)"
     lo, hi = spec["words"]
     unit = spec["unit"]
-    ask = (f"Write the story in {lname} (title too).\nPlan: {plan}\n{said}\n{KIND_NOTE[kind]}\n{ENGAGING}\n"
+    ask = (f"Write the story in {lname} (title too).\nPlan: {plan}\n{said}\n{KIND_NOTE[kind]}\n{ENGAGING}\n{for_age(age)}\n"
            f"Reading level {level}: {lo}-{hi} {unit} in total, every sentence at most {spec['max_sentence']} {unit}, "
            "simple words a child at this level can decode, 2-4 short pages."
            + (" Use the child's pictures for the pages.\n" if images else "\n")
@@ -138,5 +152,5 @@ def create_story(images, idea, level, practice_words=(), lang="en", kind="idea",
         except Exception:
             cover_img = None              # the page can still draw it later
     return {"cover": cover_img, "title": st["title"], "text": text, "pages": st["pages"], "via": "story", "part": 0, "parts": 1,
-            "source": "story", "request": kind, "level": level, "check": check, "attempts": attempt + 1, "plan": plan, "lang": lang,
+            "source": "story", "request": kind, "age": age, "level": level, "check": check, "attempts": attempt + 1, "plan": plan, "lang": lang,
             "facts": [{"title": f.title, "url": f.url} for f in used]}

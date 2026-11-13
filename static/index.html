@@ -105,6 +105,10 @@
   .tools #controls { display:contents; }
   .tools button.big { font-size:16px; padding:9px 16px; border-radius:14px; }
   .reader { margin-left:auto; background:#fff; border:1px solid #eee2c8; border-radius:20px; padding:4px 6px 4px 12px; font-size:14px; color:var(--muted); display:flex; gap:8px; align-items:center; }
+  .reader.age { margin-left:0; }
+  .reader select { border:0; background:var(--bg); border-radius:14px; padding:6px 8px; font-size:15px; font-weight:600; color:var(--ink); }
+  .reader.age.ask { border-color:var(--accent, #5b5bd6); box-shadow:0 0 0 3px rgba(91,91,214,.18); animation: agepulse 1.6s ease-in-out 3; }
+  @keyframes agepulse { 50% { box-shadow:0 0 0 7px rgba(91,91,214,.08); } }
   .reader input { border:0; background:var(--bg); border-radius:14px; padding:6px 10px; font-size:15px; width:110px; min-width:0; font-weight:600; color:var(--ink); }
   footer { text-align:center; color:var(--muted); font-size:12px; padding:0 20px 18px; }
   .spinner { display:inline-block; width:16px; height:16px; border:3px solid #ccd; border-top-color:var(--accent); border-radius:50%; animation: spin 1s linear infinite; vertical-align:-2px; }
@@ -276,6 +280,7 @@
   .rrow { margin-top:12px; font-size:16px; } .rrow .chips span { font-size:15px; }
   .rbtns { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:20px; }
   @media (max-width: 1100px) { main { grid-template-columns:1fr; } .choices { grid-template-columns:1fr; } }
+  @media (max-width: 640px) { header { flex-wrap:wrap; padding:12px 16px; gap:10px; } header .reader:not(.age) { margin-left:0; } }
 </style>
 </head>
 <body>
@@ -283,6 +288,8 @@
   <div class="logo">📚</div>
   <div><h1>Reading <span>Buddy</span></h1><div class="tag">Read aloud. Talk about it. Grow every day.</div></div>
   <label class="reader">👤 Reader <input type="text" id="learner" title="Who is reading?"></label>
+  <label class="reader age" id="agebox" title="How old is the reader? Stories and questions are made for this age">🎂 Age
+    <select id="age"><option value="">?</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select></label>
   <button class="ghost small" id="parentbtn" title="Feedback and review for grown-ups">👪 Parent</button>
 </header>
 <main>
@@ -382,6 +389,15 @@ function renderLangs(){
 }
 $("#learner").value = localStorage.getItem("rb_learner") || "Mia";
 $("#learner").onchange = () => { localStorage.setItem("rb_learner", LEARNER()); loadProfile(); };
+$("#age").onchange = async () => {
+  const age = +$("#age").value; if (!age) return;
+  const r = await fetch("/api/profile/" + encodeURIComponent(LEARNER()) + "/age", { method:"POST", headers:{"Content-Type":"application/json"},
+                        body: JSON.stringify({ age, lang: S.lang }) });
+  if (!r.ok) return say("Hmm, I couldn't save that. Try again?");
+  const p = await r.json(); renderProfile(p);
+  const read = (p.history || []).some(x => x.wcpm);
+  say(`Got it, ${esc(LEARNER())}! I'll make stories just right for ${age === 8 || age === 11 ? "an" : "a"} ${age}-year-old.` + (read ? "" : ` We'll start at <b>${esc(p.level_label)}</b>.`));
+};
 async function loadProfile(){ renderProfile(await fetch("/api/profile/" + encodeURIComponent(LEARNER()) + "?lang=" + S.lang).then(r => r.json())); }
 function sparkline(vals){
   if (vals.length < 2) return "";
@@ -392,6 +408,7 @@ function sparkline(vals){
 }
 function renderProfile(p){                     // the child's own view: friendly, no tables (details are in 👪 Parent)
   S.profile = p; const h = p.history || [];
+  $("#age").value = p.age || ""; $("#agebox").classList.toggle("ask", !p.age);
   const days = new Set(h.map(x => new Date(x.ts * 1000).toDateString()));
   let streak = 0; for (let d = new Date(); days.has(d.toDateString()); d.setDate(d.getDate() - 1)) streak++;
   const names = { recall: "🔎 Remember", inference: "💭 Think", vocabulary: "📚 Words" };
@@ -409,7 +426,7 @@ function renderProfile(p){                     // the child's own view: friendly
 }
 loadProfile().then(() => { if (S.profile.history.length) $("#say").innerHTML = `Welcome back, ${LEARNER()}! 🌟 Want to <b>read a book</b>, or <b>make your own story</b>?`; });
 const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const post = (url, body) => fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ lang: BL(), ...body })})
+const post = (url, body) => fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ lang: BL(), learner: LEARNER(), ...body })})
   .then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.statusText); return j; });
 
 const fb = (kind, data = {}) => post("/api/feedback", { kind, data, learner: LEARNER(), title: S.book ? S.book.title : "" });
@@ -938,7 +955,7 @@ async function openParent(childIdx = 0){
   const st = sum.story, top = Object.entries(st.reasons).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([kk, v]) => `${kk.replace("_", " ")} (${v})`).join(", ") || "–";
   $("#pcard").innerHTML = `
     <div class="rhead"><h2>👪 Parent dashboard</h2></div>
-    <div class="tabs">${kids.map((c, i) => `<button class="${i === childIdx ? "on" : ""}" data-k="${i}">👤 ${c.name}</button>`).join("")}</div>
+    <div class="tabs">${kids.map((c, i) => `<button class="${i === childIdx ? "on" : ""}" data-k="${i}">👤 ${c.name}${c.age ? ` · ${c.age}` : ""}</button>`).join("")}</div>
     ${kidHTML}
     <h3>💬 Feedback from reading</h3>
     <div class="fbline">Stories liked <b>${st.up}/${st.up + st.down}</b> · appeals won <b>${sum.appeals.overturned}/${sum.appeals.total}</b> · words fixed <b>${sum.words}</b> · top issues: ${top}</div>

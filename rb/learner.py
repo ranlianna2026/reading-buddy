@@ -27,22 +27,73 @@ LEVELS = {
 }
 KINDS = ("recall", "inference", "vocabulary")
 
+# the child's age sets the starting reading level (typical decoding by age; reading then moves it up or down)
+AGES = range(4, 13)
+AGE_LEVEL = {4: 1, 5: 1, 6: 1, 7: 2, 8: 3, 9: 4, 10: 5, 11: 5, 12: 5}
+DEFAULT_AGE = "6-10"      # wording for the tutor when the age isn't known
+
 
 def _path(name, lang="en"):
     base = re.sub(r"[^a-z0-9_-]", "", name.lower()) or "reader"
     return DIR / (base + ("" if lang == "en" else f"-{lang}") + ".json")      # one profile per language
 
 
+def _ages_path():
+    return DIR / "_ages.json"
+
+
+def get_age(name):
+    """The child's age (one per child, shared by every language), or None if nobody set it."""
+    try:
+        return json.loads(_ages_path().read_text()).get(_path(name).stem)
+    except (OSError, ValueError):
+        return None
+
+
+def level_for_age(age):
+    return AGE_LEVEL.get(age, 2) if age else 2
+
+
+def age_words(age):
+    """How the tutor and story writer describe the reader."""
+    return str(age) if age else DEFAULT_AGE
+
+
+def set_age(name, age):
+    """Save the age. In every language where the child hasn't read aloud yet, the level starts at the age's
+    level; once they have, the level they earned by reading is kept."""
+    if age not in AGES:
+        raise ValueError(f"age must be {AGES.start}-{AGES.stop - 1}")
+    DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        ages = json.loads(_ages_path().read_text())
+    except (OSError, ValueError):
+        ages = {}
+    ages[_path(name).stem] = age
+    _ages_path().write_text(json.dumps(ages, indent=1))
+    for lang in L.LANGS:
+        if _path(name, lang).exists():
+            prof = load(name, lang)
+            if not any(h.get("accuracy") is not None and h.get("wcpm") for h in prof["history"]):
+                prof["level"] = level_for_age(age)
+                save(prof)
+
+
 def load(name, lang="en"):
     p = _path(name, lang)
+    age = get_age(name)
     if p.exists():
-        return json.loads(p.read_text())
-    return {"name": name, "lang": lang, "level": 2, "practice": [], "mastered": [], "skills": {k: [0, 0] for k in KINDS},
-            "history": []}
+        prof = json.loads(p.read_text())
+    else:
+        prof = {"name": name, "lang": lang, "level": level_for_age(age), "practice": [], "mastered": [],
+                "skills": {k: [0, 0] for k in KINDS}, "history": []}
+    prof["age"] = age
+    return prof
 
 
 def save(prof):
     DIR.mkdir(parents=True, exist_ok=True)
+    prof = {k: v for k, v in prof.items() if k != "age"}       # the age lives in _ages.json, one per child
     _path(prof["name"], prof.get("lang", "en")).write_text(json.dumps(prof, indent=1, ensure_ascii=False))
 
 
@@ -125,11 +176,13 @@ def all_children():
     import datetime as dt
     kids = {}
     for p in sorted(DIR.glob("*.json")):
+        if p.name.startswith("_"):
+            continue                                                     # _ages.json etc. are not profiles
         prof = json.loads(p.read_text())
         name, lang = prof.get("name", p.stem), prof.get("lang", "en")
         if is_test(name):
             continue                                                     # skip automated-test learners
-        kid = kids.setdefault(name.lower(), {"name": name, "langs": {}, "days": {}, "totals": {
+        kid = kids.setdefault(name.lower(), {"name": name, "age": get_age(name), "langs": {}, "days": {}, "totals": {
             "sessions": 0, "minutes": 0.0, "books": set(), "mastered": 0}})
         kid["langs"][lang] = {"level": prof["level"], "label": LEVELS[prof["level"]]["label"], "practice": prof["practice"][:6],
                               "skills": prof["skills"], "mastered": len(prof.get("mastered", [])),
@@ -162,7 +215,7 @@ def all_children():
         have = {d["day"] for d in days}
         while (today - dt.timedelta(days=streak)).strftime("%Y-%m-%d") in have:
             streak += 1
-        out.append({"name": kid["name"], "langs": kid["langs"], "days": days,
+        out.append({"name": kid["name"], "age": kid["age"], "langs": kid["langs"], "days": days,
                     "totals": {"sessions": t["sessions"], "minutes": round(t["minutes"], 1), "books": len(t["books"]),
                                "mastered": t["mastered"], "streak": streak}})
     return out
