@@ -3,7 +3,7 @@ import { redirect, useNavigate, useSearchParams } from "react-router";
 
 import { After, type Move, type Report } from "~/components/after";
 import { Buddy } from "~/components/buddy";
-import { ActionBar, BottomNav, Crumbs, Focus, Hearts, Meter, Screen, TopNav } from "~/components/chrome";
+import { ActionBar, BottomNav, Crumbs, Focus, Hearts, Meter, PAGE, Screen, TopNav } from "~/components/chrome";
 import { Mic } from "~/components/mic";
 import { Cover } from "~/components/cover";
 import { Passage } from "~/components/passage";
@@ -236,11 +236,11 @@ export default function Read({ loaderData }: Route.ComponentProps) {
     return (
       <Screen id="page-read">
         <TopNav left={<span className="text-lg font-medium">Hi {kid.name}</span>} right={<Crumbs kid={kid} />} />
-        <Focus intro={stage}>
+        <Focus intro={stage} width={PAGE}>
           <Buddy mood={busy ? "think" : "cheer"} size={120} className="breathe" />
           <h1 className="text-3xl">What shall we read today?</h1>
           <form
-            className="flex w-full flex-col gap-3"
+            className="flex w-full max-w-[504px] flex-col gap-3"
             onSubmit={(event) => {
               event.preventDefault();
               if (!busy) fetchStory(topic.trim());
@@ -256,7 +256,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
               aria-pressed={listening}
               className={`btn w-full gap-3 ${listening ? "btn-sun listening" : "btn-quiet"}`}
             >
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+              <svg viewBox="0 0 24 24" width="31" height="31" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
                 <rect x="9" y="2.5" width="6" height="11" rx="3" fill="currentColor" stroke="none" />
                 <path d="M5.5 11a6.5 6.5 0 0 0 13 0" />
                 <path d="M12 17.5V21M9 21h6" />
@@ -286,7 +286,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
           middle={<Meter at={place} of={story.words} />}
           right={<Hearts n={kid.hearts} />}
         />
-        <main className="mx-auto w-full max-w-4xl flex-1 px-5">
+        <main className={`mx-auto w-full flex-1 px-5 ${PAGE}`}>
           <h1 className="mb-1 text-center text-2xl md:text-left">{story.title}</h1>
           <p className="mb-3 text-center text-sm text-muted md:text-left">by {story.by}</p>
           <div className="flex flex-col gap-4 md:flex-row md:items-start">
@@ -335,7 +335,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
     return (
       <Screen id="page-talking">
         <TopNav left={<span className="font-medium text-muted">Questions</span>} right={<Crumbs kid={kid} />} />
-        <main className="mx-auto w-full max-w-2xl flex-1 px-5 pb-8">
+        <main className={`mx-auto w-full flex-1 px-5 pb-8 ${PAGE}`}>
           <div className="card mb-5 max-h-56 overflow-y-auto p-5">
             <Passage text={story.passage} status={result?.status} />
           </div>
@@ -362,7 +362,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
   return (
     <Screen id="page-done">
       <TopNav left={<span className="text-lg font-medium">{kid.name}</span>} right={<Crumbs kid={kid} />} />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-6">
+      <main className={`mx-auto w-full flex-1 px-5 py-6 ${PAGE}`}>
         <div className="mb-6 flex justify-center">
           <div className="w-60">
             <Cover title={story.title} by={story.by} picture={drawn} seed={story.seed} note="just read" />

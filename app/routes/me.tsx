@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { redirect, useRevalidator } from "react-router";
 
 import { Buddy } from "~/components/buddy";
-import { BottomNav, Crumbs, Flame, Heart, Screen, Star, TopNav } from "~/components/chrome";
+import { BottomNav, Crumbs, Flame, Heart, PAGE, Screen, Star, TopNav } from "~/components/chrome";
 import { userOf } from "~/lib/auth.server";
 import { gradeOf } from "~/lib/grades";
 import { heartsNow, MAX_HEARTS, nextHeartIn } from "~/lib/kid";
@@ -48,8 +48,8 @@ export default function Me({ loaderData }: Route.ComponentProps) {
 
   return (
     <Screen id="page-me">
-      <TopNav width="max-w-[1100px]" left={<span className="text-lg font-medium">{kid.name}</span>} right={<Crumbs kid={kid} />} />
-      <main className="mx-auto w-full max-w-[1100px] flex-1 px-5 pb-6">
+      <TopNav left={<span className="text-lg font-medium">{kid.name}</span>} right={<Crumbs kid={kid} />} />
+      <main className={`mx-auto w-full flex-1 px-5 pb-6 ${PAGE}`}>
         <div className="mb-6 flex items-center gap-4">
           <Buddy mood="cheer" size={120} className="breathe" />
           <div>

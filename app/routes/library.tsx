@@ -1,7 +1,7 @@
 import { redirect } from "react-router";
 
 import { Buddy } from "~/components/buddy";
-import { BottomNav, Crumbs, Screen, TopNav } from "~/components/chrome";
+import { BottomNav, Crumbs, PAGE, Screen, TopNav } from "~/components/chrome";
 import { Cover } from "~/components/cover";
 import { seedOf } from "~/lib/seed";
 import { userOf } from "~/lib/auth.server";
@@ -31,8 +31,8 @@ export default function Library({ loaderData }: Route.ComponentProps) {
   const { kid, read } = loaderData;
   return (
     <Screen id="page-library">
-      <TopNav width="max-w-[1100px]" left={<span className="text-lg font-medium">Stories</span>} right={<Crumbs kid={kid} />} />
-      <main className="mx-auto w-full max-w-[1100px] flex-1 px-5 pb-6">
+      <TopNav left={<span className="text-lg font-medium">Stories</span>} right={<Crumbs kid={kid} />} />
+      <main className={`mx-auto w-full flex-1 px-5 pb-6 ${PAGE}`}>
         <div className="mb-6 flex items-center gap-4">
           <Buddy mood="hi" size={100} className="breathe" />
         </div>
