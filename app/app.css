@@ -283,11 +283,97 @@
   }
 }
 
+.rb-drift,
+.rb-sway,
+.rb-float,
+.rb-twinkle,
+.rb-roll,
+.rb-bob {
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+.rb-drift {
+  animation-name: rb-drift;
+}
+@keyframes rb-drift {
+  0%,
+  100% {
+    transform: translateX(-9px);
+  }
+  50% {
+    transform: translateX(15px);
+  }
+}
+.rb-sway {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation-name: rb-sway;
+}
+@keyframes rb-sway {
+  0%,
+  100% {
+    transform: rotate(-1.4deg);
+  }
+  50% {
+    transform: rotate(1.4deg);
+  }
+}
+.rb-float {
+  animation-name: rb-float;
+}
+@keyframes rb-float {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(5px, -9px);
+  }
+}
+.rb-twinkle {
+  animation-name: rb-twinkle;
+}
+@keyframes rb-twinkle {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.rb-roll {
+  animation-name: rb-roll;
+}
+@keyframes rb-roll {
+  0%,
+  100% {
+    transform: translate(-5px, 1px);
+  }
+  50% {
+    transform: translate(5px, -2px);
+  }
+}
+.rb-bob {
+  animation-name: rb-bob;
+}
+@keyframes rb-bob {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pop,
   .breathe,
   .blink,
-  .listening {
+  .listening,
+  .rb-drift,
+  .rb-sway,
+  .rb-float,
+  .rb-twinkle,
+  .rb-roll,
+  .rb-bob {
     animation: none;
   }
   .btn,

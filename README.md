@@ -60,10 +60,9 @@ child's name on it. The same art animates beside the passage while they read.
 | `app/components/buddy.tsx` | Fig. One SVG, five moods: hi, listen, cheer, think, sad |
 | `app/components/chrome.tsx` | Top nav, bottom nav, hearts, stars, streak, the meter, the action bar |
 | `app/components/passage.tsx` | The story, word by word: read, missed, and the quote being cited |
-| `app/components/scene.tsx` | The scene beside the story: loads `scene.wasm` and blits a frame at a time |
-| `app/components/cover.tsx` | A book: its pixel art, its title, and who it was read by |
+| `app/components/scene.tsx` | The scene beside the story: one painted SVG, drawn from the book's seed |
+| `app/components/cover.tsx` | A book: its painted scene, its title, and who it was read by |
 | `app/components/voices.tsx` | Voice: female, male, every voice model and id, and cloning your own |
-| `scene/src/lib.rs` | The pixel-art painter, in Rust. No dependencies, no allocation, 28 KB of wasm |
 | `legacy-python/` | The first Reading Buddy, FastAPI and Gutenberg. Kept for its scoring and prompts |
 
 ## The look
@@ -83,25 +82,20 @@ hard shadow a child can hit, and one job centred on the screen at a time.
 
 ## The scene
 
-`scene/` is a Rust crate with no dependencies and no allocation — one static buffer, one export:
+Every story is painted beside it, and again on its cover: `app/components/scene.tsx` draws one SVG —
+no canvas, no wasm, no image to download. Six places (meadow, sea, space, forest, night, dawn) each
+carry their own palette in OKLCH and their own weather: layered washes of sky, soft hills or water or
+moon dust, pines or round trees, clouds, mist, stars, petals, birds, foam.
 
-```rust
-paint(seed, kind, width, height, beat) -> *const u8   // RGBA, straight into a canvas
-```
+It is illustration, not sprites. Edges are pulled off true by a `feDisplacementMap` over fractal noise
+so a hill looks brushed rather than plotted, a paper grain sits over the whole frame on `overlay`, and
+a soft vignette closes the corners. Fig stands in the middle distance in the same line as everywhere
+else in the app — the component imports `Buddy`, so he is never drawn twice.
 
-It draws one of six places (meadow, sea, space, forest, night, dawn) in dithered pixel art, in the
-spirit of [headstart-landing](https://github.com/brandonmlicea/headstart-landing)'s painter and
-[papermache](https://github.com/brandonmlicea/papermache)'s scene-from-a-description idea, but small
-enough to run a frame at a time in a child's browser: 28 KB of wasm, built with
-
-```sh
-cd scene && cargo build --release --target wasm32-unknown-unknown
-cp target/wasm32-unknown-unknown/release/fig_scene.wasm ../public/scene.wasm
-```
-
-`seed` comes from the child and the book, so a story always looks like itself. `beat` is the
-milliseconds since the scene opened: clouds drift, waves roll, stars twinkle, trees sway, and Fig and
-a friend breathe and hop. The same call with `still` renders a book cover.
+The seed comes from the child and the book, so a story always looks like itself: it decides where the
+sun sits, how the hills roll, where the trees stand and where the stars are. Motion is CSS — clouds
+drift, trees sway, water rolls, fireflies float, Fig breathes — and `prefers-reduced-motion` or a book
+cover's `still` stops all of it.
 
 ## Voices
 
