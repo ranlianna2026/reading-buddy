@@ -251,20 +251,13 @@ export default function Read({ loaderData }: Route.ComponentProps) {
               if (!busy) fetchStory(topic.trim());
             }}
           >
-            <input
-              value={topic}
-              onChange={(event) => setTopic(event.target.value)}
-              maxLength={70}
-              placeholder="a brave snail, outer space, my dog…"
-              className="h-16 rounded-2xl border-2 border-line bg-surface px-5 text-center text-lg outline-none focus:border-leaf"
-            />
             <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {IDEAS.map(({ word, Art }) => (
                 <li key={word}>
                   <button
                     type="button"
                     className="btn btn-quiet h-16 w-full justify-start gap-3 px-4 text-[15px]"
-                    onClick={() => setTopic(word)}
+                    onClick={() => setTopic(topic === word ? "" : word)}
                     aria-pressed={topic === word}
                   >
                     <Idea Art={Art} />
