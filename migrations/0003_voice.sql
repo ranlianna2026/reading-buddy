@@ -1,0 +1,2 @@
+ALTER TABLE kids ADD COLUMN voice TEXT;
+ALTER TABLE kids ADD COLUMN voice_name TEXT;

@@ -1,4 +1,9 @@
+node_modules/
+.react-router/
+build/
+.wrangler/
+.dev.vars
 .env
-.venv/
-__pycache__/
 out/
+__pycache__/
+.venv/
