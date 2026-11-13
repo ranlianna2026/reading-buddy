@@ -6,7 +6,7 @@ import { Cover } from "~/components/cover";
 import { seedOf } from "~/lib/seed";
 import { userOf } from "~/lib/auth.server";
 import { heartsNow } from "~/lib/kid";
-import { kidOf } from "~/lib/kid.server";
+import { reading } from "~/lib/kid.server";
 import { history } from "~/lib/memory.server";
 import type { Route } from "./+types/library";
 
@@ -22,7 +22,7 @@ const SHELVES = [
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await userOf(request);
   if (!user) throw redirect("/hello");
-  const kid = await kidOf(user.id);
+  const kid = await reading(request, user.id);
   if (!kid) throw redirect("/hello?who=1");
   return { kid: { ...kid, hearts: heartsNow(kid) }, read: await history(kid.id, 8) };
 }

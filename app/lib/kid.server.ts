@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 
-import { id } from "./auth.server";
+import { id, readerOf } from "./auth.server";
 import { gradeOf } from "./grades";
 import { day, heartsNow, levelFor, MAX_HEARTS, type Kid } from "./kid";
 
@@ -16,6 +16,13 @@ export async function kidsOf(userId: string) {
 export async function kidOf(userId: string, kidId?: string | null) {
   const kids = await kidsOf(userId);
   return kids.find((kid) => kid.id === kidId) ?? kids[0] ?? null;
+}
+
+// Whoever this device last chose, as long as they still belong to the account.
+export async function reading(request: Request, userId: string) {
+  const kids = await kidsOf(userId);
+  const picked = readerOf(request);
+  return kids.find((kid) => kid.id === picked) ?? kids[0] ?? null;
 }
 
 export async function addKid(userId: string, name: string, age: number | null, grade = "2") {

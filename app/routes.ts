@@ -1,11 +1,12 @@
 import { type RouteConfig, index, route } from "@react-router/dev/routes";
 
 export default [
-  index("routes/start.tsx"),
+  index("routes/home.tsx"),
   route("hello", "routes/hello.tsx"),
   route("read", "routes/read.tsx"),
   route("library", "routes/library.tsx"),
   route("me", "routes/me.tsx"),
+  route("parent", "routes/parent.tsx"),
   route("api/auth/:action", "routes/api.auth.$action.ts"),
   route("api/passkey/:step", "routes/api.passkey.$step.ts"),
   route("api/settings", "routes/api.settings.ts"),

@@ -3,14 +3,14 @@ import { userOf } from "~/lib/auth.server";
 import { tongueOf } from "~/lib/languages";
 import { env } from "cloudflare:workers";
 import { heartsNow, MAX_HEARTS, nextHeartIn } from "~/lib/kid";
-import { kidOf } from "~/lib/kid.server";
+import { reading } from "~/lib/kid.server";
 import { history, recall } from "~/lib/memory.server";
 import type { Route } from "./+types/api.settings";
 
 async function mine(request: Request) {
   const user = await userOf(request);
   if (!user) throw new Refusal("Sign in first.", 401);
-  const kid = await kidOf(user.id);
+  const kid = await reading(request, user.id);
   if (!kid) throw new Refusal("No reader yet.", 404);
   return { user, kid };
 }

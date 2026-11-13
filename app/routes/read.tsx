@@ -12,7 +12,7 @@ import { post } from "~/lib/api";
 import { userOf } from "~/lib/auth.server";
 import { gradeOf } from "~/lib/grades";
 import { heartsNow, levelFor } from "~/lib/kid";
-import { kidOf } from "~/lib/kid.server";
+import { reading } from "~/lib/kid.server";
 import { readingPlace, score as grade, type Score } from "~/lib/scoring";
 import { tongueOf } from "~/lib/languages";
 import type { Question } from "~/lib/quiz";
@@ -53,7 +53,7 @@ type Story = { title: string; passage: string; place: string; seed: number; by: 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await userOf(request);
   if (!user) throw redirect("/hello");
-  const kid = await kidOf(user.id);
+  const kid = await reading(request, user.id);
   if (!kid) throw redirect("/hello?who=1");
   return { kid: { ...kid, hearts: heartsNow(kid) } };
 }
@@ -183,10 +183,10 @@ export default function Read({ loaderData }: Route.ComponentProps) {
   const quizDone = (answers: Answer[]) => {
     const won = answers.filter((one) => one.verdict === "correct").length;
     setRight(won);
-    void finish(won, answers.length);
+    void finish(won, answers.length, answers);
   };
 
-  const finish = async (won = right, asked_n = questions.length) => {
+  const finish = async (won = right, asked_n = questions.length, answers: Answer[] = []) => {
     if (!story || !result || asked.current) return;
     asked.current = true;
     setStage("done");
@@ -223,6 +223,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
         seed: story.seed,
         finished: result.finished,
         aloud,
+        answers,
         detail: { heard, miscues: result.miscues },
       });
       setReport({ said: praise.said, stars: kept.stars_won, streak: kept.streak, right: won, asked: asked_n, level: kept.level });

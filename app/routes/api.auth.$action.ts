@@ -1,4 +1,4 @@
-import { checkPassword, clearedCookie, createUser, endSession, sessionCookie, startSession, userByEmail, userOf, EMAIL } from "~/lib/auth.server";
+import { checkPassword, clearedCookie, createUser, endSession, readerCookie, sessionCookie, startSession, userByEmail, userOf, EMAIL } from "~/lib/auth.server";
 import { gradeOf } from "~/lib/grades";
 import { addKid, kidsOf } from "~/lib/kid.server";
 import type { Route } from "./+types/api.auth.$action";
@@ -15,6 +15,15 @@ export async function action({ request, params }: Route.ActionArgs) {
     return new Response(null, { status: 204, headers: { "Set-Cookie": clearedCookie(request) } });
   }
 
+  if (params.action === "reader") {
+    const user = await userOf(request);
+    if (!user) return bad("Sign in first.", 401);
+    const want = String(form.get("kidId") ?? "");
+    const kids = await kidsOf(user.id);
+    if (!kids.some((kid) => kid.id === want)) return bad("No such reader.", 404);
+    return Response.json({ kidId: want }, { headers: { "Set-Cookie": readerCookie(request, want) } });
+  }
+
   if (params.action === "kid") {
     const user = await userOf(request);
     if (!user) return bad("Sign in first.", 401);
@@ -23,7 +32,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     const grade = gradeOf(String(form.get("grade") ?? ""));
     const age = Number(form.get("age"));
     const kidId = await addKid(user.id, name, Number.isFinite(age) && age > 0 ? age : grade.age, grade.id);
-    return Response.json({ kidId, kids: await kidsOf(user.id) });
+    return Response.json({ kidId, kids: await kidsOf(user.id) }, { headers: { "Set-Cookie": readerCookie(request, kidId) } });
   }
 
   if (!EMAIL.test(email)) return bad("That email does not look right.");

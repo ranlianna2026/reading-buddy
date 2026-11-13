@@ -6,7 +6,7 @@ import { BottomNav, Crumbs, Flame, Heart, PAGE, Screen, Star, TopNav } from "~/c
 import { userOf } from "~/lib/auth.server";
 import { gradeOf } from "~/lib/grades";
 import { heartsNow, MAX_HEARTS, nextHeartIn } from "~/lib/kid";
-import { kidOf } from "~/lib/kid.server";
+import { reading } from "~/lib/kid.server";
 import { history, recall } from "~/lib/memory.server";
 import { LanguagePick } from "~/components/languages";
 import { ReadingScore } from "~/components/score";
@@ -28,7 +28,7 @@ const KINDS: Record<string, string> = {
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await userOf(request);
   if (!user) throw redirect("/hello");
-  const kid = await kidOf(user.id);
+  const kid = await reading(request, user.id);
   if (!kid) throw redirect("/hello?who=1");
   return {
     email: user.email,

@@ -1,3 +1,5 @@
+import { env } from "cloudflare:workers";
+
 import { count, guard, respond, text } from "~/lib/ai.server";
 import { id, userOf } from "~/lib/auth.server";
 import { cheer, kidOf, settle } from "~/lib/kid.server";
@@ -42,6 +44,16 @@ export async function action({ request }: Route.ActionArgs) {
     const practice = Array.isArray(body.practiceWords) ? (body.practiceWords as unknown[]).map((word) => text(word, 30)).filter(Boolean) : [];
     for (const word of practice.slice(0, 6)) notes.push({ kind: "word", subject: word, note: "tripped on this one" });
     await remember(kid.id, notes);
+
+    const answers = Array.isArray(body.answers) ? (body.answers as Record<string, unknown>[]) : [];
+    for (const one of answers.slice(0, 10)) {
+      const kind = ["recall", "inference", "vocabulary"].includes(String(one.kind)) ? String(one.kind) : "recall";
+      await env.DB.prepare(
+        "INSERT INTO answers (id, kid_id, reading_id, kind, verdict, word, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"
+      )
+        .bind(id(), kid.id, reading.id, kind, String(one.verdict ?? "not_yet"), text(one.word, 40), Date.now())
+        .run();
+    }
 
     const level = await settle(kid, {
       accuracy: reading.accuracy,
