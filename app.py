@@ -43,6 +43,36 @@ def find_book(req: FindReq):
     return {**b, "seconds": round(time.time() - t0, 1)}
 
 
+class AskReq(BaseModel):
+    text: str               # whatever the child said or typed: a title, "a story about...", "teach me about..."
+    learner: str = "Reader"
+    lang: str = "en"
+
+
+def _story_for(learner_name, idea, lang, kind):
+    prof = learner.load(learner_name, lang)
+    st = story.create_story([], idea, prof["level"], prof["practice"][:3], lang, kind, prof.get("prefs"), prof.get("age"))
+    return {**st, "level_label": learner.LEVELS[prof["level"]]["label"]}
+
+
+@app.post("/api/ask")
+def ask(req: AskReq):
+    """One door for every request. A topic or idea becomes a story at the child's level; a title is looked up as a
+    real book, and if there's no such book we can read, Buddy writes an original story in its spirit."""
+    if not req.text.strip():
+        raise HTTPException(400, "tell me what you'd like to read")
+    t0 = time.time()
+    kind, subject = story.classify_request(req.text, req.lang)
+    if kind == "topic":
+        out = _story_for(req.learner, req.text.strip(), req.lang, "topic")
+    else:
+        try:
+            out = books.get_passage(subject, 0, req.lang)
+        except Exception:               # not on Project Gutenberg (or search is down): write it instead
+            out = _story_for(req.learner, subject, req.lang, "book")
+    return {**out, "asked": req.text, "seconds": round(time.time() - t0, 1)}
+
+
 @app.post("/api/page_photo")
 async def page_photo(file: UploadFile = File(...)):
     data = await file.read()
@@ -77,7 +107,8 @@ class QReq(BaseModel):
 def questions(req: QReq):
     prof = learner.load(req.learner, req.lang) if req.learner else None
     focus = learner.focus_skill(prof) if prof else None
-    qs, topic = tutor.make_questions(req.passage, req.practice_words, req.age, focus, req.lang, prof["level"] if prof else 2)
+    age = learner.age_words(prof["age"]) if prof and prof.get("age") else req.age
+    qs, topic = tutor.make_questions(req.passage, req.practice_words, age, focus, req.lang, prof["level"] if prof else 2)
     return {"questions": qs, "learn_topic": topic}
 
 
@@ -87,23 +118,30 @@ class GradeReq(BaseModel):
     answer: str
     attempt: int = 1
     age: str = "6-10"
+    learner: str = ""
     lang: str = "en"
+
+
+def _age(learner_name, fallback):
+    a = learner.get_age(learner_name) if learner_name else None
+    return learner.age_words(a) if a else fallback
 
 
 @app.post("/api/grade")
 def grade(req: GradeReq):
-    return tutor.grade(req.passage, req.question, req.answer, req.age, req.attempt, req.lang)
+    return tutor.grade(req.passage, req.question, req.answer, _age(req.learner, req.age), req.attempt, req.lang)
 
 
 class LearnReq(BaseModel):
     topic: str
     title: str = ""
+    learner: str = ""
     lang: str = "en"
 
 
 @app.post("/api/learn")
 def learn(req: LearnReq):
-    out = tutor.learn_more(req.topic, req.title, lang=req.lang)
+    out = tutor.learn_more(req.topic, req.title, age=_age(req.learner, "6-10"), lang=req.lang)
     if not out:
         raise HTTPException(404, "nothing found")
     return out
@@ -117,7 +155,8 @@ async def make_story(idea: str = Form(""), learner_name: str = Form("Reader"), l
         raise HTTPException(400, "add a picture or tell me your idea")
     prof = learner.load(learner_name, lang)
     t0 = time.time()
-    st = story.create_story(imgs, idea, prof["level"], prof["practice"][:3], lang, prof.get("prefs"))
+    kind = "topic" if not imgs and story.classify_request(idea, lang)[0] == "topic" else "idea"   # "teach me about..."
+    st = story.create_story(imgs, idea, prof["level"], prof["practice"][:3], lang, kind, prof.get("prefs"), prof.get("age"))
     return {**st, "seconds": round(time.time() - t0, 1), "level_label": learner.LEVELS[prof["level"]]["label"]}
 
 
@@ -128,6 +167,22 @@ def _profile_view(prof):
 @app.get("/api/profile/{name}")
 def profile(name: str, lang: str = "en"):
     return _profile_view(learner.load(name, lang))
+
+
+class AgeReq(BaseModel):
+    age: int
+    lang: str = "en"
+
+
+@app.post("/api/profile/{name}/age")
+def set_age(name: str, req: AgeReq):
+    """The child's age: sets the starting reading level (until they've read aloud) and how stories and
+    questions are pitched."""
+    try:
+        learner.set_age(name, req.age)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return _profile_view(learner.load(name, req.lang))
 
 
 class SessionReq(BaseModel):
@@ -196,7 +251,7 @@ class AppealReq(BaseModel):
 
 @app.post("/api/appeal")
 def appeal(req: AppealReq):
-    g = tutor.regrade(req.passage, req.question, req.answer, req.verdict_before, lang=req.lang)
+    g = tutor.regrade(req.passage, req.question, req.answer, req.verdict_before, age=_age(req.learner, "6-10"), lang=req.lang)
     feedback.log("appeal", {"question": req.question, "answer": req.answer, "passage": req.passage,
                             "verdict_before": req.verdict_before, "verdict_after": g["verdict"]},
                  req.learner, req.lang, req.title)

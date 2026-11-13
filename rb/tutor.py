@@ -149,7 +149,7 @@ L_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["fact"
     "source_index": {"type": "integer"}}}
 
 
-KIDS = {"en": "facts for kids", "es": "datos para niños", "fr": "pour les enfants", "zh": "儿童 知识"}
+KIDS = {"en": "facts for kids", "es": "datos para niños", "fr": "pour les enfants", "zh": "儿童 知识", "ar": "معلومات للأطفال"}
 
 
 def learn_more(topic, title, age="6-10", lang="en"):

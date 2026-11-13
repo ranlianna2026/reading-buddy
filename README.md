@@ -6,6 +6,15 @@ A voice reading tutor for kids. Pick a book, read it aloud, then talk about it.
    - **Keenable** searches Project Gutenberg (public domain) and fetches the real book text, which becomes the answer key.
    - **Muse Spark** fixes typography only (drop caps, captions); code checks the cleaned text still matches the book ≥ 95% word-for-word.
    - A page photo is transcribed by **Muse Spark** vision.
+   - **Anything else becomes a story.** "Teach me about volcanoes" / "a story about a dragon who loves pizza" is written as
+     a story at the child's level, with true facts found by Keenable. A title that isn't on Project Gutenberg gets an
+     original story in the same spirit (`/api/ask` routes the request; the patterns are in `rb/story.py`).
+   - **Every page gets a picture**: the book's own illustration, the child's drawing, or one drawn by **Muse Image**
+     (in the reference's style, or from scratch if that fails); if a drawing still fails, the page shows the nearest picture.
+   - **Languages:** English, Spanish, French, Chinese and Arabic (right-to-left pages; vowel marks and hamza/ta-marbuta
+     spellings are folded so speech recognition matches the text).
+   - **Age:** pick the reader's age (4-12) next to their name. It sets the starting reading level (4-6 → 1, 7 → 2,
+     8 → 3, 9 → 4, 10+ → 5) until they've read aloud, and every story, question and grade is pitched to that age.
 2. **Read aloud.** Words light up as the child reads (Chrome Web Speech API). When they finish, **code, not a model**, aligns the transcript with the text: words correct per minute (WCPM), accuracy, misread and skipped words marked on the page.
 3. **Talk about it.** Muse Spark asks 3 spoken questions (recall, inference, vocabulary, preferring a word the child stumbled on), grades each spoken answer by meaning, and gives a hint and one retry. Every judgment cites a quote that code verifies is really in the passage, and that line lights up in the story. Questions are generated while the child reads, so there is no wait.
 4. **Report + learn more.** Reading speed, accuracy, comprehension score, words to practice (tap to hear), and a kid-safe fun fact found with **Keenable** search (`safety_mode: strict`) with its source.
