@@ -6,6 +6,7 @@ import { Buddy } from "~/components/buddy";
 import { Focus, Screen } from "~/components/chrome";
 import { Hero } from "~/components/hero";
 import { fields, post, send } from "~/lib/api";
+import { GRADES, SPAN } from "~/lib/grades";
 import { userOf } from "~/lib/auth.server";
 import { kidsOf } from "~/lib/kid.server";
 import { PLACES, seedOf } from "~/lib/scenery";
@@ -33,7 +34,7 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [age, setAge] = useState("7");
+  const [grade, setGrade] = useState("");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
@@ -71,7 +72,7 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
 
   const addKid = () =>
     run("kid", async () => {
-      await send("/api/auth/kid", fields({ name, age }));
+      await send("/api/auth/kid", fields({ name, grade }));
       go("/read");
     });
 
@@ -82,18 +83,39 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
         <Focus intro={step}>
           <Buddy mood="hi" size={170} className="breathe" />
           <h1 className="text-4xl">Who is reading today?</h1>
+          <p className="mono text-muted">{SPAN}</p>
           <p className="text-muted">Fig will remember them: what they love, and which words are still tricky.</p>
           <form
-            className="card flex w-full flex-col gap-4 bg-surface/92 p-6 text-left backdrop-blur-sm"
+            className="card flex w-full flex-col gap-5 bg-surface/92 p-6 text-left backdrop-blur-sm"
             onSubmit={(event) => {
               event.preventDefault();
-              if (name.trim()) addKid();
+              if (name.trim() && grade) addKid();
             }}
           >
+            <fieldset>
+              <legend className="mb-2 font-medium">Which grade are you in?</legend>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {GRADES.map((one) => (
+                  <button
+                    key={one.id}
+                    type="button"
+                    className="option text-center"
+                    aria-pressed={grade === one.id}
+                    onClick={() => setGrade(one.id)}
+                  >
+                    <span className="block font-medium">{one.short}</span>
+                    <span className="mono block text-muted">age {one.age}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-sm text-muted">
+                Reading Buddy writes for {SPAN}. The grade sets the first reading level and the words-a-minute
+                Fig measures against; it moves with them as they read.
+              </p>
+            </fieldset>
             <label className="flex flex-col gap-2 font-medium">
               Their name
               <input
-                autoFocus
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 maxLength={40}
@@ -101,21 +123,7 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
                 className="h-14 rounded-2xl border-2 border-line bg-page px-4 text-lg outline-none focus:border-leaf"
               />
             </label>
-            <label className="flex flex-col gap-2 font-medium">
-              How old are they?
-              <select
-                value={age}
-                onChange={(event) => setAge(event.target.value)}
-                className="h-14 rounded-2xl border-2 border-line bg-page px-4 text-lg outline-none focus:border-leaf"
-              >
-                {[5, 6, 7, 8, 9, 10, 11].map((years) => (
-                  <option key={years} value={years}>
-                    {years}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button className="btn btn-leaf w-full" disabled={!name.trim() || busy === "kid"}>
+            <button className="btn btn-leaf w-full" disabled={!name.trim() || !grade || busy === "kid"}>
               {busy === "kid" ? "One moment…" : "Start reading"}
             </button>
             <button type="button" className="text-sm font-medium text-leaf-ink underline" onClick={addPasskey} disabled={busy === "add"}>
@@ -134,8 +142,8 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
       <Focus intro={mode}>
         <Buddy mood="hi" size={180} className="breathe" />
         <h1 className="text-4xl">Reading Buddy</h1>
-        <p className="mono text-muted">Chapter I · {place}</p>
         <p className="text-lg text-muted">Pick a story, read it out loud to Fig, then talk about it.</p>
+        <p className="mono text-muted">{SPAN}</p>
         <form
           className="card flex w-full flex-col gap-4 bg-surface/92 p-6 text-left backdrop-blur-sm"
           onSubmit={(event) => {

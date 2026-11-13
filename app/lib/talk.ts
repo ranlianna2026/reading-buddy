@@ -76,6 +76,33 @@ export function hear(onWords: (said: string, settled: boolean) => void, onStop?:
 
 let playing: HTMLAudioElement | null = null;
 
+// One answer: listen until the child stops talking, or until the clock runs out.
+export function listenOnce(ms = 11000, quiet = 1800) {
+  return new Promise<string>((done) => {
+    let said = "";
+    let over = false;
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    let mic: { stop: () => void } | null = null;
+    const finish = () => {
+      if (over) return;
+      over = true;
+      clearTimeout(settle);
+      clearTimeout(clock);
+      mic?.stop();
+      done(said.trim());
+    };
+    const clock = setTimeout(finish, ms);
+    mic = hear(
+      (words) => {
+        said = words;
+        clearTimeout(settle);
+        if (said.trim()) settle = setTimeout(finish, quiet);
+      },
+      () => finish()
+    );
+  });
+}
+
 export function hush() {
   playing?.pause();
   playing = null;

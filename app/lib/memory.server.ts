@@ -57,13 +57,31 @@ export async function forget(kidId: string) {
 
 export async function keepReading(
   kidId: string,
-  reading: { id: string; title: string; words: number; wcpm: number; accuracy: number; comprehension: number; place: string; seed: number; detail: unknown }
+  reading: {
+    id: string;
+    title: string;
+    words: number;
+    wcpm: number;
+    accuracy: number;
+    comprehension: number;
+    score: number;
+    asked: number;
+    correct: number;
+    seconds: number;
+    place: string;
+    seed: number;
+    detail: unknown;
+  }
 ) {
   const now = Date.now();
   await env.DB.prepare(
-    "INSERT INTO readings (id, kid_id, title, words, wcpm, accuracy, comprehension, place, seed, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
+    "INSERT INTO readings (id, kid_id, title, words, wcpm, accuracy, comprehension, score, asked, correct, seconds, place, seed, created_at) " +
+      "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"
   )
-    .bind(reading.id, kidId, reading.title, reading.words, reading.wcpm, reading.accuracy, reading.comprehension, reading.place, reading.seed, now)
+    .bind(
+      reading.id, kidId, reading.title, reading.words, reading.wcpm, reading.accuracy, reading.comprehension,
+      reading.score, reading.asked, reading.correct, reading.seconds, reading.place, reading.seed, now
+    )
     .run();
   await env.MEMORY.put(page(kidId, reading.id), JSON.stringify({ ...reading, at: now }, null, 2), {
     httpMetadata: { contentType: "application/json" },
@@ -72,9 +90,13 @@ export async function keepReading(
 
 export async function history(kidId: string, limit = 20) {
   const rows = await env.DB.prepare(
-    "SELECT id, title, words, wcpm, accuracy, comprehension, place, seed, created_at FROM readings WHERE kid_id = ?1 ORDER BY created_at DESC LIMIT ?2"
+    "SELECT id, title, words, wcpm, accuracy, comprehension, score, asked, correct, seconds, place, seed, created_at " +
+      "FROM readings WHERE kid_id = ?1 ORDER BY created_at DESC LIMIT ?2"
   )
     .bind(kidId, limit)
-    .all<{ id: string; title: string; words: number; wcpm: number; accuracy: number; comprehension: number; place: string; seed: number; created_at: number }>();
+    .all<{
+      id: string; title: string; words: number; wcpm: number; accuracy: number; comprehension: number;
+      score: number; asked: number; correct: number; seconds: number; place: string; seed: number; created_at: number;
+    }>();
   return rows.results;
 }

@@ -1,4 +1,5 @@
 import { checkPassword, clearedCookie, createUser, endSession, sessionCookie, startSession, userByEmail, userOf, EMAIL } from "~/lib/auth.server";
+import { gradeOf } from "~/lib/grades";
 import { addKid, kidsOf } from "~/lib/kid.server";
 import type { Route } from "./+types/api.auth.$action";
 
@@ -19,8 +20,9 @@ export async function action({ request, params }: Route.ActionArgs) {
     if (!user) return bad("Sign in first.", 401);
     const name = String(form.get("name") ?? "").trim();
     if (!name) return bad("What is your reader called?");
+    const grade = gradeOf(String(form.get("grade") ?? ""));
     const age = Number(form.get("age"));
-    const kidId = await addKid(user.id, name, Number.isFinite(age) && age > 0 ? age : null);
+    const kidId = await addKid(user.id, name, Number.isFinite(age) && age > 0 ? age : grade.age, grade.id);
     return Response.json({ kidId, kids: await kidsOf(user.id) });
   }
 

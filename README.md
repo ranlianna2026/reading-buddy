@@ -63,6 +63,11 @@ child's name on it. The same art animates beside the passage while they read.
 | `app/lib/pixel.ts` | The pixel canvas: OKLCH to sRGB, ramps, Bayer dither, cumulus and canopy brushes |
 | `app/lib/scenery.ts` | The six places, painted pixel by pixel, and Fig in them |
 | `app/lib/languages.ts` | Forty languages, their own names and their speech tags |
+| `app/lib/grades.ts` | Pre-K to 6th grade: the age, the starting level, the words-a-minute norm |
+| `app/lib/quiz.ts` | The quiz model: difficulty by level, code-checked options, answering by voice |
+| `app/lib/report.ts` | The reading score: speed, fluency and understanding compiled into one number |
+| `app/components/quiz.tsx` | The quiz: tap or say, two tries, a hint, the quote, and an appeal |
+| `app/components/score.tsx` | The reading score on the profile: the dial and where it came from |
 | `app/components/scene.tsx` | The scene on a canvas, drawn once from the book's seed |
 | `app/components/cover.tsx` | A book: spine, letterpress title, chapter rule, the art, the byline |
 | `app/components/hero.tsx` | The opening: a wide pixel scene behind the first screen |
@@ -103,6 +108,36 @@ The frame and the book card are reverse-engineered from
 around a rounded plate; the book is a cream card with a spine gradient down its left edge, a
 letterpress title over a hairline rule, an IBM Plex Mono chapter label, the art inset, and a mono
 footer carrying the byline and the reading.
+
+## The quiz
+
+After a story Fig asks three questions — one `recall`, one `inference`, one `vocabulary` — and the
+reading level decides how they are asked. At levels 1 and 2 every question is three big options a
+child taps or says out loud; from level 3 the "why" question is answered aloud, and by level 5 only
+vocabulary keeps its options. Code owns the format, not the model: a single-choice question must come
+back with three distinct options and a real answer or it is downgraded to open, and for a Pre-K to
+2nd-grade reader the server asks once more for options rather than hand a six-year-old an open
+question. Options are shuffled server-side, and every quote is checked to appear in the passage.
+
+Choice questions are graded instantly in code. Spoken answers go to the model, which must also choose
+its next move — praise, hint and retry, re-read together, or explain and move on — bounded by code so
+a correct answer always moves on and the last try never asks for another. Fig reads the options aloud
+for children who cannot read them yet, two silent tries move the quiz along rather than stall, and a
+child who disagrees can say **I think I was right** for a careful second opinion.
+
+## The reading score
+
+Three measures, one number out of a hundred, on the profile — the third tab in the dock.
+
+- **Speed** — words correct a minute against that grade's own norm (Hasbrouck & Tindal, 50th
+  percentile), so a Pre-K reader is not judged like a sixth grader.
+- **Fluency** — words read right, scored across the instructional band: 90% is frustration, 98% is
+  independent reading.
+- **Understanding** — the share of quiz questions answered correctly.
+
+They weight 30 / 35 / 35 into a single score with a band (Getting started → Soaring), the grade's
+label, and the move since the earlier half of the reader's history. The same number appears on the
+report card at the end of a story, and is stored per reading in D1.
 
 ## Languages
 

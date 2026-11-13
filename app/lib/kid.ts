@@ -11,6 +11,7 @@ export type Kid = {
   streak_day: string | null;
   stars: number;
   language: string;
+  grade: string;
 };
 
 export const day = (at = Date.now()) => new Date(at).toLocaleDateString("en-CA");

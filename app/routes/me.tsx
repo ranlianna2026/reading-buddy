@@ -4,9 +4,11 @@ import { redirect } from "react-router";
 import { Buddy } from "~/components/buddy";
 import { BottomNav, Crumbs, Flame, Heart, Screen, Star, TopNav } from "~/components/chrome";
 import { userOf } from "~/lib/auth.server";
+import { gradeOf } from "~/lib/grades";
 import { heartsNow, MAX_HEARTS, nextHeartIn } from "~/lib/kid";
 import { kidOf } from "~/lib/kid.server";
 import { history, recall } from "~/lib/memory.server";
+import { ReadingScore } from "~/components/score";
 import { ThemePick } from "~/components/theme-pick";
 import { tongueOf } from "~/lib/languages";
 import { say, speakIn } from "~/lib/talk";
@@ -49,7 +51,12 @@ export default function Me({ loaderData }: Route.ComponentProps) {
           <div>
             <h1 className="text-3xl">{kid.name}</h1>
             <p className="text-muted">{read.length} stories read with Fig</p>
+            <p className="mono text-muted">{gradeOf(kid.grade).label}</p>
           </div>
+        </div>
+
+        <div className="mb-6">
+          <ReadingScore rows={read} grade={kid.grade} name={kid.name} />
         </div>
 
         <dl className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

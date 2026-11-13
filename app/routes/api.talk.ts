@@ -1,5 +1,6 @@
 import { askJson, count, guard, respond, text, texts } from "~/lib/ai.server";
 import { tongueOf } from "~/lib/languages";
+import { levelOf, shape, type Question } from "~/lib/quiz";
 import { norm } from "~/lib/scoring";
 import type { Route } from "./+types/api.talk";
 
@@ -30,30 +31,73 @@ export async function action({ request }: Route.ActionArgs) {
     if (!passage) throw new Error("No passage to talk about.");
 
     if (body.step === "questions") {
+      const level = count(body.level, 1, 5, 2);
+      const hard = levelOf(level);
       const stumbled = texts(body.practiceWords, 30).slice(0, 8);
-      const made = await askJson(
-        VOICE(age, tongue),
-        `${stumbled.length ? `Words the child stumbled on: ${stumbled.join(", ")}.\n` : ""}` +
-          "Write exactly 3 spoken questions about this passage: one 'recall' (what happened or who), one " +
-          "'inference' (why, or how someone felt), one 'vocabulary' (what a word from the passage means, " +
-          "preferring a word the child stumbled on). Answer as JSON: " +
-          '{"questions": [{"kind": "recall|inference|vocabulary", "question": "...", "answer": "the answer, ' +
-          'plus other answers the passage supports", "quote": "exact words copied from the passage"}]}' +
-          `\n\nPassage:\n${passage}`,
-        800,
-        0.6
-      );
-      const list = Array.isArray(made.questions) ? made.questions : [];
-      const questions = list
-        .map((item) => item as Record<string, unknown>)
-        .map((item) => ({
-          kind: ["recall", "inference", "vocabulary"].includes(String(item.kind)) ? String(item.kind) : "recall",
-          question: text(item.question, 200),
-          answer: text(item.answer, 300),
-          quote: quoteOk(text(item.quote, 300), passage) ? text(item.quote, 300) : "",
-        }))
-        .filter((item) => item.question)
-        .slice(0, 3);
+      const weakest = ["recall", "inference", "vocabulary"].includes(String(body.focus)) ? String(body.focus) : "";
+      const formats = Object.entries(hard.formats)
+        .map(([kind, how]) => `${kind}: ${how === "choice" ? "single choice with 3 options" : "open-ended, no options"}`)
+        .join("; ");
+      const ask = (again: string) =>
+        askJson(
+          VOICE(age, tongue),
+          `${stumbled.length ? `Words the child stumbled on: ${stumbled.join(", ")}.\n` : ""}` +
+            `${weakest ? `This child finds ${weakest} questions hard, so make that one extra gentle.\n` : ""}` +
+            `Write exactly 3 questions about this passage for a reader at level ${level} of 5. Difficulty: ${hard.style}.\n` +
+            `One 'recall' (who, what happened), one 'inference' (why, or how someone felt), one 'vocabulary' ` +
+            `(a word the passage itself explains — put that clue in the question). Formats: ${formats}.\n` +
+            `Every question at most ${hard.q} words and every option at most ${hard.opt} words, in easy everyday words. ` +
+            "Wrong options must be clearly wrong to a child who read the story: no trick options.\n" +
+            "Answer as JSON: " +
+            '{"questions": [{"kind": "recall|inference|vocabulary", ' +
+            '"question": "the question only", "answer": "the answer, plus other answers the passage supports", ' +
+            '"quote": "exact words copied from the passage", "word": "the word asked about for vocabulary, else empty", ' +
+            '"choices": ["three short options when the format is single choice, else empty"], "answer_index": 0}]}' +
+            again +
+            `\n\nPassage:\n${passage}`,
+          1100,
+          0.6
+        );
+
+      const build = (made: Record<string, unknown>): Question[] =>
+        (Array.isArray(made.questions) ? made.questions : [])
+          .map((item) => item as Record<string, unknown>)
+          .map((item) => {
+            const kind = (["recall", "inference", "vocabulary"].includes(String(item.kind)) ? String(item.kind) : "recall") as Question["kind"];
+            return shape(
+              {
+                kind,
+                question: text(item.question, 200),
+                answer: text(item.answer, 300),
+                quote: quoteOk(text(item.quote, 300), passage) ? text(item.quote, 300) : "",
+                word: text(item.word, 40),
+                choices: Array.isArray(item.choices) ? item.choices.map((one) => text(one, 60)) : [],
+                answer_index: Number(item.answer_index ?? -1),
+              },
+              hard.formats[kind]
+            );
+          })
+          .filter((item) => item.question)
+          .slice(0, 3);
+
+      // A young reader must get something to tap. If the model skipped the options, ask once more for them.
+      let questions = build(await ask(""));
+      const missing = questions.filter((one) => one.format === "open" && hard.formats[one.kind] === "choice");
+      if (missing.length) {
+        const retry = build(
+          await ask(
+            `\n\nThese needed three short options and did not have them: ` +
+              `${missing.map((one) => JSON.stringify(one.question)).join(", ")}. ` +
+              "Give every single-choice question exactly three distinct short options and a correct answer_index."
+          )
+        );
+        const better = retry.filter((one) => one.format === "choice" || hard.formats[one.kind] === "open");
+        if (better.length >= questions.filter((one) => one.format === "choice" || hard.formats[one.kind] === "open").length)
+          questions = retry;
+      }
+      // Below level 3 nothing is answered out loud: drop a question rather than ask one that is too hard.
+      if (level <= 2) questions = questions.filter((one) => one.format === "choice");
+
       if (!questions.length) throw new Error("No questions came back.");
       return { questions };
     }
@@ -81,6 +125,30 @@ export async function action({ request }: Route.ActionArgs) {
         verdict: ["correct", "partly", "not_yet"].includes(String(made.verdict)) ? String(made.verdict) : "not_yet",
         feedback: text(made.feedback, 300) || "Good try.",
         hint: text(made.hint, 200),
+        quote: quoteOk(back, passage) ? back : quoteOk(quote, passage) ? quote : "",
+      };
+    }
+
+    if (body.step === "appeal") {
+      const question = text(body.question, 200);
+      const said = text(body.said, 600);
+      const quote = text(body.quote, 300);
+      const made = await askJson(
+        VOICE(age, tongue) + " You are giving a careful second opinion on a grade the child disagrees with.",
+        `Passage:\n${passage}\n\nQuestion: ${question}\nExpected answer: ${text(body.answer, 300)}\n` +
+          `The child said: "${said}". You marked it ${text(body.before, 20) || "not_yet"} and they think they were right.\n` +
+          "Read the passage again. If any reasonable reading of the passage supports their answer, mark it correct and " +
+          "say sorry warmly. If it still is not supported, explain kindly with the quote that shows the answer. " +
+          'Answer as JSON: {"verdict": "correct|partly|not_yet", "feedback": "one or two short spoken sentences", ' +
+          '"hint": "", "quote": "exact words from the passage"}',
+        500,
+        0.3
+      );
+      const back = text(made.quote, 300);
+      return {
+        verdict: ["correct", "partly", "not_yet"].includes(String(made.verdict)) ? String(made.verdict) : "not_yet",
+        feedback: text(made.feedback, 300) || "Let's look at it together.",
+        hint: "",
         quote: quoteOk(back, passage) ? back : quoteOk(quote, passage) ? quote : "",
       };
     }

@@ -5,7 +5,7 @@ import { day, heartsNow, MAX_HEARTS, type Kid } from "./kid";
 
 export async function kidsOf(userId: string) {
   const rows = await env.DB.prepare(
-    "SELECT id, name, age, hearts, hearts_at, streak, streak_day, stars, language FROM kids WHERE user_id = ?1 ORDER BY created_at"
+    "SELECT id, name, age, hearts, hearts_at, streak, streak_day, stars, language, grade FROM kids WHERE user_id = ?1 ORDER BY created_at"
   )
     .bind(userId)
     .all<Kid>();
@@ -17,12 +17,12 @@ export async function kidOf(userId: string, kidId?: string | null) {
   return kids.find((kid) => kid.id === kidId) ?? kids[0] ?? null;
 }
 
-export async function addKid(userId: string, name: string, age: number | null) {
+export async function addKid(userId: string, name: string, age: number | null, grade = "2") {
   const kidId = id();
   await env.DB.prepare(
-    "INSERT INTO kids (id, user_id, name, age, hearts, hearts_at, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)"
+    "INSERT INTO kids (id, user_id, name, age, grade, hearts, hearts_at, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)"
   )
-    .bind(kidId, userId, name.slice(0, 40), age, MAX_HEARTS, Date.now())
+    .bind(kidId, userId, name.slice(0, 40), age, grade, MAX_HEARTS, Date.now())
     .run();
   return kidId;
 }

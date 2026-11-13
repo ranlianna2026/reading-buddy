@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 
+import { reading as compile } from "~/lib/report";
 import { say } from "~/lib/talk";
 import type { Score } from "~/lib/scoring";
 import { Buddy } from "./buddy";
@@ -11,15 +12,19 @@ export function After({
   title,
   score,
   report,
+  grade,
   again,
   home,
 }: {
   title: string;
   score: Score;
   report: Report | null;
+  grade: string;
   again: () => void;
   home: () => void;
 }) {
+  const comprehension = report && report.asked ? Math.round((report.right / report.asked) * 100) : 0;
+  const whole = compile({ wcpm: score.wcpm, accuracy: score.accuracy, comprehension }, grade);
   const spoken = useRef(false);
   useEffect(() => {
     if (report && !spoken.current) {
@@ -42,6 +47,24 @@ export function After({
           <p className="bubble text-lg">{report.said}</p>
         </>
       )}
+
+      <div className="card flex w-full items-center gap-4 p-5">
+        <div
+          className="grid h-20 w-20 shrink-0 place-items-center rounded-full"
+          style={{ background: `conic-gradient(var(--rb-leaf) ${(whole.score / 100) * 360}deg, var(--rb-locked) 0deg)` }}
+          role="img"
+          aria-label={`Reading score ${whole.score} out of 100`}
+        >
+          <div className="grid h-16 w-16 place-items-center rounded-full bg-surface">
+            <span className="text-2xl leading-none font-medium">{whole.score}</span>
+          </div>
+        </div>
+        <div className="text-left">
+          <p className="font-medium">Reading score</p>
+          <p className="text-leaf-ink">{whole.band.name}</p>
+          <p className="mono text-muted">speed · fluency · understanding, together</p>
+        </div>
+      </div>
 
       <dl className="grid w-full grid-cols-3 gap-3">
         <Tile label="Words a minute" value={score.wcpm} />

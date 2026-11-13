@@ -7,21 +7,23 @@ import { ActionBar, BottomNav, Crumbs, Focus, Hearts, Meter, Screen, TopNav } fr
 import { Mic } from "~/components/mic";
 import { Cover } from "~/components/cover";
 import { Passage } from "~/components/passage";
+import { Quiz, type Answer } from "~/components/quiz";
 import { Scene, type Place } from "~/components/scene";
 import { post } from "~/lib/api";
 import { userOf } from "~/lib/auth.server";
-import { band, heartsNow } from "~/lib/kid";
+import { gradeOf } from "~/lib/grades";
+import { heartsNow } from "~/lib/kid";
 import { kidOf } from "~/lib/kid.server";
 import { readingPlace, score as grade, type Score } from "~/lib/scoring";
 import { tongueOf } from "~/lib/languages";
+import type { Question } from "~/lib/quiz";
+import { reading as compile } from "~/lib/report";
 import { hear, hush, say, sayAlong, speakIn } from "~/lib/talk";
 import type { Route } from "./+types/read";
 
 export const meta = () => [{ title: "Read · Reading Buddy" }];
 
 type Story = { title: string; passage: string; place: Place; seed: number; by: string; topic: string; stretch: string[]; words: number; level: number };
-type Question = { kind: string; question: string; answer: string; quote: string };
-type Verdict = { verdict: string; feedback: string; hint: string; quote: string };
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await userOf(request);
@@ -44,9 +46,6 @@ export default function Read({ loaderData }: Route.ComponentProps) {
   const [listening, setListening] = useState(false);
   const [result, setResult] = useState<Score | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [at, setAt] = useState(0);
-  const [tries, setTries] = useState(1);
-  const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [right, setRight] = useState(0);
   const [report, setReport] = useState<Report | null>(null);
   const [figAt, setFigAt] = useState<number | undefined>(undefined);
@@ -61,13 +60,12 @@ export default function Read({ loaderData }: Route.ComponentProps) {
     setBusy("story");
     setError("");
     try {
-      const made = await post<Story>("/api/story", { kidId: kid.id, topic: want, level: band(kid.age) });
+      const made = await post<Story>("/api/story", { kidId: kid.id, topic: want, level: gradeOf(kid.grade).level });
       setStory(made);
       setStage("reading");
       setHeard("");
       setResult(null);
       setQuestions([]);
-      setAt(0);
       setRight(0);
       setReport(null);
       setFigAt(undefined);
@@ -75,8 +73,9 @@ export default function Read({ loaderData }: Route.ComponentProps) {
       post<{ questions: Question[] }>("/api/talk", {
         step: "questions",
         passage: made.passage,
-        age: String(kid.age ?? 7),
+        age: String(kid.age ?? gradeOf(kid.grade).age),
         language: kid.language,
+        level: gradeOf(kid.grade).level,
       })
         .then((made) => setQuestions(made.questions))
         .catch(() => setQuestions([]));
@@ -137,88 +136,23 @@ export default function Read({ loaderData }: Route.ComponentProps) {
     setListening(false);
     if (!story) return;
     const seconds = Math.max(5, (Date.now() - started.current) / 1000);
-    const scored = grade(story.passage, heard, seconds);
-    setResult(scored);
+    setResult(grade(story.passage, heard, seconds));
     setStage("talking");
-    setAt(0);
-    setTries(1);
-    setVerdict(null);
   };
 
-  const askNow = async (question: Question) => {
-    await say(question.question, "ask");
+  const quizDone = (answers: Answer[]) => {
+    const won = answers.filter((one) => one.verdict === "correct").length;
+    setRight(won);
+    void finish(won, answers.length);
   };
 
-  useEffect(() => {
-    if (stage === "talking" && questions[at] && !verdict) askNow(questions[at]);
-  }, [stage, at, questions.length, verdict]);
-
-  const answer = () => {
-    if (listening) {
-      mic.current?.stop();
-      return;
-    }
-    hush();
-    setHeard("");
-    setListening(true);
-    mic.current = hear(
-      (said, settled) => {
-        setHeard(said);
-        if (settled) judge(said);
-      },
-      () => setListening(false)
-    );
-  };
-
-  const judge = async (said: string) => {
-    const question = questions[at];
-    if (!story || !question) return;
-    setBusy("judge");
-    try {
-      const made = await post<Verdict>("/api/talk", {
-        language: kid.language,
-        step: "grade",
-        passage: story.passage,
-        question: question.question,
-        answer: question.answer,
-        quote: question.quote,
-        said,
-        attempt: tries,
-        age: String(kid.age ?? 7),
-      });
-      setVerdict(made);
-      if (made.verdict === "correct") setRight((count) => count + 1);
-      say(made.feedback + (made.hint ? ` ${made.hint}` : ""), made.verdict === "correct" ? "cheer" : "ask");
-    } catch (problem) {
-      setError(problem instanceof Error ? problem.message : "That did not work.");
-    }
-    setBusy("");
-  };
-
-  const onwards = () => {
-    if (verdict && verdict.verdict !== "correct" && tries < 2) {
-      setTries(2);
-      setVerdict(null);
-      setHeard("");
-      return;
-    }
-    if (at + 1 < questions.length) {
-      setAt(at + 1);
-      setTries(1);
-      setVerdict(null);
-      setHeard("");
-      return;
-    }
-    finish();
-  };
-
-  const finish = async () => {
+  const finish = async (won = right, asked_n = questions.length) => {
     if (!story || !result || asked.current) return;
     asked.current = true;
     setStage("done");
     setBusy("finish");
     try {
-      const comprehension = questions.length ? Math.round((right / questions.length) * 100) : 0;
+      const comprehension = asked_n ? Math.round((won / asked_n) * 100) : 0;
       const praise = await post<{ said: string; notes: unknown[] }>("/api/talk", {
         language: kid.language,
         step: "praise",
@@ -226,7 +160,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
         title: story.title,
         wcpm: result.wcpm,
         accuracy: result.accuracy,
-        right,
+        right: won,
         practiceWords: result.practiceWords,
         age: String(kid.age ?? 7),
       });
@@ -237,13 +171,17 @@ export default function Read({ loaderData }: Route.ComponentProps) {
         wcpm: result.wcpm,
         accuracy: result.accuracy,
         comprehension,
+        asked: asked_n,
+        correct: won,
+        seconds: Math.round(result.seconds),
+        score: compile({ wcpm: result.wcpm, accuracy: result.accuracy, comprehension }, kid.grade).score,
         practiceWords: result.practiceWords,
         notes: praise.notes,
         place: story.place,
         seed: story.seed,
         detail: { heard, miscues: result.miscues },
       });
-      setReport({ said: praise.said, stars: kept.stars_won, streak: kept.streak, right, asked: questions.length });
+      setReport({ said: praise.said, stars: kept.stars_won, streak: kept.streak, right: won, asked: asked_n });
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "Your reading was saved without a note.");
     }
@@ -333,46 +271,29 @@ export default function Read({ loaderData }: Route.ComponentProps) {
   }
 
   if (stage === "talking") {
-    const question = questions[at];
     return (
       <Screen id="page-talking">
-        <TopNav
-          left={<span className="font-medium text-muted">{questions.length ? `Question ${at + 1} of ${questions.length}` : "Talking"}</span>}
-          right={<Crumbs kid={kid} />}
-        />
-        <main className="mx-auto w-full max-w-2xl flex-1 px-5">
-          <div className="card mb-4 p-6">
-            <Passage text={story.passage} status={result?.status} quote={verdict?.quote || undefined} />
+        <TopNav left={<span className="font-medium text-muted">Questions</span>} right={<Crumbs kid={kid} />} />
+        <main className="mx-auto w-full max-w-2xl flex-1 px-5 pb-8">
+          <div className="card mb-5 max-h-56 overflow-y-auto p-5">
+            <Passage text={story.passage} status={result?.status} />
           </div>
-          {!question ? (
-            <p className="text-center text-muted">Fig is thinking of a question…</p>
+          {questions.length ? (
+            <Quiz
+              passage={story.passage}
+              questions={questions}
+              language={kid.language}
+              age={String(kid.age ?? gradeOf(kid.grade).age)}
+              onDone={quizDone}
+            />
           ) : (
-            <div className="flex flex-col items-start gap-4">
-              <div className="flex items-center gap-4">
-                <Buddy mood={verdict ? (verdict.verdict === "correct" ? "cheer" : "think") : listening ? "listen" : "hi"} size={110} />
-                <div className="bubble text-lg">{verdict ? `${verdict.feedback} ${verdict.hint}`.trim() : question.question}</div>
-              </div>
-              {heard && !verdict && <p className="w-full text-center text-muted italic">“{heard}”</p>}
+            <div className="flex items-center gap-4">
+              <Buddy mood="think" size={110} className="breathe" />
+              <p className="bubble text-lg">Fig is thinking of some questions…</p>
             </div>
           )}
           {error && <p className="mt-3 text-center text-berry-ink">{error}</p>}
         </main>
-        <ActionBar tone={verdict ? (verdict.verdict === "correct" ? "good" : "bad") : "plain"}>
-          {verdict ? (
-            <button className="btn btn-leaf w-full" onClick={onwards} autoFocus>
-              {verdict.verdict !== "correct" && tries < 2 ? "Try again" : at + 1 < questions.length ? "Next question" : "See how I did"}
-            </button>
-          ) : (
-            <>
-              <Mic on={listening} onClick={answer} label={listening ? "Done" : busy === "judge" ? "Thinking…" : "Say your answer"} />
-              {question && (
-                <button className="btn btn-quiet" onClick={() => say(question.question, "ask")}>
-                  Say it again
-                </button>
-              )}
-            </>
-          )}
-        </ActionBar>
       </Screen>
     );
   }
@@ -386,7 +307,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
             <Cover title={story.title} by={story.by} seed={story.seed} place={story.place} note="just read" />
           </div>
         </div>
-        {result && <After title={story.title} score={result} report={report} again={() => setStage("pick")} home={() => go("/me")} />}
+        {result && <After title={story.title} score={result} report={report} grade={kid.grade} again={() => setStage("pick")} home={() => go("/me")} />}
         {busy === "finish" && <p className="mt-4 text-center text-muted">Fig is writing it down…</p>}
         {error && <p className="mt-3 text-center text-berry-ink">{error}</p>}
       </main>
