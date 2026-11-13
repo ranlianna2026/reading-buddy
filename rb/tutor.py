@@ -20,16 +20,20 @@ Q_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["quest
     "learn_topic": {"type": "string", "description": "one concrete real-world thing from the story a child would enjoy learning a fact about, e.g. 'foxes' or 'velveteen fabric'"},
     "questions": {"type": "array", "minItems": 3, "maxItems": 3, "items": {
         "type": "object", "additionalProperties": False,
-        "required": ["kind", "question", "expected_answer", "quote"],
+        "required": ["kind", "question", "expected_answer", "quote", "word"],
         "properties": {
             "kind": {"type": "string", "enum": ["recall", "inference", "vocabulary"]},
             "question": {"type": "string", "description": "the question only, no praise or preamble"},
             "expected_answer": {"type": "string", "description": "the main answer plus other answers the passage would also support"},
-            "quote": {"type": "string", "description": "exact words copied from the passage that support the answer"}}}}}}
+            "quote": {"type": "string", "description": "exact words copied from the passage that support the answer"},
+            "word": {"type": "string", "description": "for vocabulary questions, the word asked about; else empty"}}}}}}
 
 
-def make_questions(passage, practice_words=(), age="6-10"):
+def make_questions(passage, practice_words=(), age="6-10", focus=None):
     hint = f"Words the child stumbled on: {', '.join(practice_words)}. " if practice_words else ""
+    if focus:
+        hint += (f"This child finds {focus} questions hard: make the {focus} question gentle and scaffolded, "
+                 "building on an easy detail first. ")
     out = chat_json(SYSTEM.format(age=age),
                     f"{hint}Write exactly 3 questions about this passage: one 'recall' (what happened / who), "
                     "one 'inference' (why / how did a character feel), one 'vocabulary' (meaning of a word "
@@ -41,7 +45,11 @@ def make_questions(passage, practice_words=(), age="6-10"):
 
 
 G_SCHEMA = {"type": "object", "additionalProperties": False,
-            "required": ["verdict", "feedback", "hint", "quote"], "properties": {
+            "required": ["verdict", "next_action", "feedback", "hint", "quote"], "properties": {
+                "next_action": {"type": "string", "enum": ["praise_move_on", "hint_retry", "reread_retry", "explain_move_on"],
+                                "description": "the tutor's next move: praise_move_on if correct; hint_retry for a near miss; "
+                                               "reread_retry if the child needs to look at the sentence again; "
+                                               "explain_move_on if they are stuck"},
                 "verdict": {"type": "string", "enum": ["correct", "partly", "not_yet"]},
                 "feedback": {"type": "string", "description": "1-2 short sentences spoken to the child"},
                 "hint": {"type": "string", "description": "a nudge toward the answer if not correct, else empty"},
@@ -59,6 +67,11 @@ def grade(passage, q, answer, age="6-10", attempt=1):
                     G_SCHEMA, "grade")
     if not quote_ok(out.get("quote", ""), passage):
         out["quote"] = q["quote"] if quote_ok(q["quote"], passage) else ""
+    # guardrails on the tutor's choice: correct always moves on; last try never asks for another retry
+    if out["verdict"] == "correct":
+        out["next_action"] = "praise_move_on"
+    elif attempt >= 2 and out["next_action"] in ("hint_retry", "reread_retry"):
+        out["next_action"] = "explain_move_on"
     return out
 
 

@@ -2,12 +2,12 @@
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from rb import books, scoring, tutor
+from rb import books, learner, meta_api, scoring, story, tutor
 
 app = FastAPI(title="Reading Buddy")
 STATIC = Path(__file__).parent / "static"
@@ -57,11 +57,13 @@ class QReq(BaseModel):
     passage: str
     practice_words: list[str] = []
     age: str = "6-10"
+    learner: str = ""
 
 
 @app.post("/api/questions")
 def questions(req: QReq):
-    qs, topic = tutor.make_questions(req.passage, req.practice_words, req.age)
+    focus = learner.focus_skill(learner.load(req.learner)) if req.learner else None
+    qs, topic = tutor.make_questions(req.passage, req.practice_words, req.age, focus)
     return {"questions": qs, "learn_topic": topic}
 
 
@@ -89,3 +91,39 @@ def learn(req: LearnReq):
     if not out:
         raise HTTPException(404, "nothing found")
     return out
+
+
+@app.post("/api/story")
+async def make_story(idea: str = Form(""), learner_name: str = Form("Reader"), files: list[UploadFile] = File(default=[])):
+    imgs = [meta_api.data_url(await f.read(), f.content_type or "image/jpeg") for f in files[:4]]
+    if not imgs and not idea.strip():
+        raise HTTPException(400, "add a picture or tell me your idea")
+    prof = learner.load(learner_name)
+    t0 = time.time()
+    st = story.create_story(imgs, idea, prof["level"], prof["practice"][:3])
+    return {**st, "seconds": round(time.time() - t0, 1), "level_label": learner.LEVELS[prof["level"]]["label"]}
+
+
+def _profile_view(prof):
+    return {**prof, "level_label": learner.LEVELS[prof["level"]]["label"], "focus": learner.focus_skill(prof)}
+
+
+@app.get("/api/profile/{name}")
+def profile(name: str):
+    return _profile_view(learner.load(name))
+
+
+class SessionReq(BaseModel):
+    learner: str
+    title: str
+    source: str = ""
+    score: dict
+    answers: list[dict] = []
+
+
+@app.post("/api/session")
+def session(req: SessionReq):
+    read_ok = [t.strip(".,;:!?\"'()—–-“”‘’").lower() for t, s in zip(req.score.get("tokens", []), req.score.get("status", []))
+               if s == "correct"]
+    prof, change = learner.record_session(req.learner, req.title, req.source, req.score, req.answers, read_ok)
+    return {"profile": _profile_view(prof), "change": change}
