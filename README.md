@@ -68,7 +68,6 @@ child's name on it. The same art animates beside the passage while they read.
 | `app/components/score.tsx` | The reading score on the profile: the dial and where it came from |
 | `app/lib/picture.server.ts` | The picture model: Muse Image styles, prompts and reference edits, cached in R2 |
 | `app/components/cover.tsx` | A book: spine, letterpress title, chapter rule, the art, the byline |
-| `app/components/hero.tsx` | The opening: the illustrated scene behind the first screen |
 | `app/components/voices.tsx` | Voice: female, male, every voice model and id, and cloning your own |
 | `legacy-python/` | The first Reading Buddy, FastAPI and Gutenberg. Kept for its scoring and prompts |
 
@@ -137,9 +136,9 @@ becomes the reference. It draws with Muse Image when `MODEL_API_KEY` is set and 
 otherwise, so a picture always arrives. Results are cached in R2 by reference, text and kind, and
 served back from `/api/picture`.
 
-It is the art of the whole product: the page beside the story, the cover on the shelf, and the scene
-behind the opening screen. A book that has not been written yet has no picture, so its cover carries
-its own initial on a tinted panel rather than wait on the model.
+It is the art of the story pages and the book covers. The opening screen is deliberately plain: no
+picture is generated there. A book that has not been written yet has no picture either, so its cover
+carries its own initial on a tinted panel rather than wait on the model.
 
 ## Languages
 
