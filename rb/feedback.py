@@ -20,10 +20,14 @@ LOG = Path(os.environ.get("RB_FEEDBACK_LOG", ROOT / "out" / "feedback.jsonl"))
 KINDS = {"story", "picture", "word", "appeal", "session", "review"}
 
 
-def _read():
+def _read(include_tests=False):
     if not LOG.exists():
         return []
-    return [json.loads(l) for l in LOG.read_text().splitlines() if l.strip()]
+    evs = [json.loads(l) for l in LOG.read_text().splitlines() if l.strip()]
+    if include_tests or os.environ.get("RB_FEEDBACK_LOG"):          # isolated test logs keep everything
+        return evs
+    test_ids = {e["id"] for e in evs if LR.is_test(e.get("learner"))}
+    return [e for e in evs if e["id"] not in test_ids and e.get("id_ref") not in test_ids]
 
 
 def log(kind, data, learner="Reader", lang="en", title=""):

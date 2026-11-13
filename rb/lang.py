@@ -57,8 +57,19 @@ def detect_script_ok(text, lang):
         return han > letters
     if han > 0:
         return False
+    words = re.findall(r"[a-zà-ÿ']+", text.lower())
+    if not words:
+        return False
+    hits = lambda vocab: sum(w in vocab for w in words) / len(words)
+    es, fr, en = hits(_ES), hits(_FR), hits(_EN)
     if lang == "es":
-        return bool(re.search(r"[áéíóúñ¿¡]|\b(el|la|los|las|que|y|de)\b", text, re.I))
+        return bool(re.search(r"[ñ¿¡]", text)) or es >= max(fr, en) and es > 0
     if lang == "fr":
-        return bool(re.search(r"[àâçéèêëîïôûù]|\b(le|la|les|des|et|une|est)\b", text, re.I))
-    return True
+        return bool(re.search(r"[çœ]|\b(qu|l|d|j|c|n|s)'", text, re.I)) or fr >= max(es, en) and fr > 0
+    return en >= max(es, fr)
+
+
+# common function words, to tell the Latin-script languages apart
+_EN = set("the a an and is are was were he she it they we you i of to in on at for with what who why how did does do not this that his her".split())
+_ES = set("el la los las un una y es son era fue de del que en con por para qué quién por qué cómo no se su sus lo al muy".split())
+_FR = set("le la les un une et est sont était de du des que qui en dans avec pour il elle ils on ne pas se sa son ses au aux quoi quand dire veut".split())

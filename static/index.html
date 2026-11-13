@@ -243,6 +243,7 @@
   .opt span { width:38px; height:38px; border-radius:50%; background:var(--accent-soft); color:var(--accent); display:grid; place-items:center; font-family:"Fredoka"; flex:none; }
   .opt.right { border-color:var(--mint); background:#e2f7ee; box-shadow:0 4px 0 #9fe2c8; } .opt.right span { background:var(--mint); color:#fff; }
   .opt.wrong { opacity:.45; text-decoration:line-through; animation: shake .35s; } @keyframes shake { 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+  .opt.reading { border-color:var(--accent-2); box-shadow:0 4px 0 #c9c3ff; transform:scale(1.02); }
   .mic.small { width:64px; height:64px; font-size:28px; margin-top:10px; }
   .mic { width:96px; height:96px; border-radius:50%; margin:22px auto 8px; display:grid; place-items:center; font-size:42px; background:#fff;
          border:3px solid #ffd2da; box-shadow:0 5px 0 #ffd2da; cursor:pointer; transition: all .2s; }
@@ -473,14 +474,15 @@ function renderPassage(){
               : (b.pages && b.pages[pi] && b.pages[pi].image_url) || "";       // the book's own illustrations
     return { start, end: gi, html, img, text: t, gen: null };
   });
-  planPictures();
+  S.page = 0;
   $("#passage").innerHTML = S.pages.map((p, i) => `<div class="pg" data-p="${i}" hidden>${p.html}</div>`).join("");
   $("#dots").innerHTML = S.pages.map((_, i) => `<span data-p="${i}"></span>`).join("");
   document.querySelectorAll("#dots span").forEach(d => d.onclick = () => showPage(+d.dataset.p));
   showPage(0);
+  planPictures();
 }
 function showPage(n){
-  n = Math.max(0, Math.min(n, S.pages.length - 1));
+  n = Math.max(0, Math.min(Number.isFinite(n) ? n : 0, S.pages.length - 1));
   S.page = n;
   document.querySelectorAll("#passage .pg").forEach(d => d.hidden = +d.dataset.p !== n);
   document.querySelectorAll("#dots span").forEach(d => d.classList.toggle("on", +d.dataset.p === n));
@@ -661,7 +663,7 @@ async function finishReading(){
   document.querySelectorAll("#practice span").forEach(el => el.onclick = () => say(el.textContent.replace(" 🔊",""), false, BL()));
   const praise = s.accuracy >= 0.95 ? "Wow, super smooth reading!" : s.accuracy >= 0.85 ? "Nice reading!" : "Good effort! Reading out loud takes practice.";
   $("#qcard").innerHTML = loadCard(praise, `You read ${s.words_correct} ${UNIT()} · ${s.wcpm} ${UNIT()} a minute · ${Math.round(s.accuracy * 100)}% right. Questions coming…`);
-  await say(`${praise} Now let's talk about the story!`);
+  await say(`${qp(BL(), praise)} ${qp(BL(), "Now let's talk about the story!")}`, true, BL());
   askQuestions();
 }
 function wordFeedback(el, m){
@@ -707,7 +709,7 @@ function quizCard(i, n, q){
     <div id="qproof"></div>
     <div class="qactions"><span><button class="ghost small" id="qagain">🔁 Hear it again</button> <button class="ghost small" id="qhint">💡 Hint</button></span><button class="ghost small" id="qskip">Skip ›</button></div>`;
   $("#qagain").onclick = () => { speechSynthesis.cancel(); say(q.question, false, BL()); };
-  $("#qhint").onclick = () => { $("#qproof").innerHTML = proofHTML(q.quote).replace("📖 From the story", "💡 Look here in the story"); say("Look at this part of the story!"); };
+  $("#qhint").onclick = () => { $("#qproof").innerHTML = proofHTML(q.quote).replace("📖 From the story", "💡 Look here in the story"); sayL("Look at this part of the story!"); };
   $("#qskip").onclick = () => { S.skipQ = true; speechSynthesis.cancel(); S.abortListen && S.abortListen(); };
 }
 function pickByVoice(said, q){
@@ -732,6 +734,7 @@ function choose(q){                                  // resolves with the option
     listenOnce(12000).then(said => { if (done) return; const k = said ? pickByVoice(said, q) : -1; if (k >= 0 || !said) fin(k); else { $("#qmiclabel").textContent = "Tap the answer you mean!"; } });
   });
 }
+const sayL = (phrase, show = true, v = {}) => say(qp(BL(), phrase, v), show, BL());
 function buddySays(text, mood){ const box = $("#qsaybox"); if (!box) return; box.hidden = false; box.className = "qsay " + (mood || "");
   $("#qem").textContent = mood === "correct" ? "⭐" : mood === "miss" ? "💡" : mood === "reread" ? "📖" : "🦉"; }
 async function quizOnly(){                       // she only listened: questions without read-aloud scoring
@@ -756,29 +759,34 @@ async function askQuestions(){
     S.sayTarget = "#qsay"; S.heardTarget = "#qheard";
     let verdict = "not_yet", action = "hint_retry";
     for (let attempt = 1; attempt <= 2 && !S.skipQ; attempt++) {
-      if (attempt > 1) await say("Let's try again.", false);
+      if (attempt > 1) await sayL("Let's try again.", false);
       await say(q.question, false, BL());
+      if (q.format === "choice" && attempt === 1 && !S.skipQ)       // read the options too, for kids who can't read them yet
+        for (let k = 0; k < q.choices.length && !S.skipQ; k++) {
+          const btn = document.querySelector(`.opt[data-k="${k}"]`); btn && btn.classList.add("reading");
+          await say(`${"ABC"[k]}: ${q.choices[k]}`, false, BL()); btn && btn.classList.remove("reading");
+        }
       if (S.skipQ) break;
       if (q.format === "choice") {                    // single choice: graded instantly by code
         const k = await choose(q); $("#qmiclabel").textContent = "";
         if (S.skipQ) break;
         if (k < 0) { buddySays(); S.silent = (S.silent || 0) + 1;
-          if (S.silent >= 2) { await say("That's okay! Let's go to the next one."); break; }
-          await say("I didn't catch that. Tap your answer!"); attempt--; continue; }
+          if (S.silent >= 2) { await sayL("That's okay! Let's go to the next one."); break; }
+          await sayL("I didn't catch that. Tap your answer!"); attempt--; continue; }
         const btn = document.querySelector(`.opt[data-k="${k}"]`);
         if (k === q.answer_index) { verdict = "correct"; btn.classList.add("right"); buddySays("", "correct"); burst();
-          $("#qproof").innerHTML = proofHTML(q.quote); await say(["Yes! That's right!", "You got it!", "Great job!"][i % 3]); await new Promise(r => setTimeout(r, 900)); break; }
+          $("#qproof").innerHTML = proofHTML(q.quote); await sayL(["Yes! That's right!", "You got it!", "Great job!"][i % 3]); await new Promise(r => setTimeout(r, 900)); break; }
         btn.classList.add("wrong");
-        if (attempt === 1) { buddySays("", "reread"); $("#qproof").innerHTML = proofHTML(q.quote); await say("Not quite. Let's look at the story again, then pick another one."); continue; }
+        if (attempt === 1) { buddySays("", "reread"); $("#qproof").innerHTML = proofHTML(q.quote); await sayL("Not quite. Let's look at the story again, then pick another one."); continue; }
         document.querySelector(`.opt[data-k="${q.answer_index}"]`).classList.add("right"); buddySays("", "miss");
-        await say("The answer is:"); await say(q.choices[q.answer_index], true, BL()); await say("You'll get it next time!"); await new Promise(r => setTimeout(r, 900)); break;
+        await say(`${qp(BL(), "The answer is:")} ${q.choices[q.answer_index]}. ${qp(BL(), "You'll get it next time!")}`, true, BL()); await new Promise(r => setTimeout(r, 900)); break;
       }
       $("#qmiclabel").textContent = "I'm listening… say your answer!";
       const answer = await listenOnce();
       $("#qmiclabel").textContent = "";
       if (S.skipQ) break;
-      if (!answer) { buddySays(); await say("I didn't catch that. Tap the microphone and try again!"); continue; }
-      buddySays(); say(["Hmm, let me think…", "Ooh, interesting…", "Let me check the story…"][attempt % 3]);
+      if (!answer) { buddySays(); await sayL("I didn't catch that. Tap the microphone and try again!"); continue; }
+      buddySays(); sayL(["Hmm, let me think…", "Ooh, interesting…", "Let me check the story…"][attempt % 3]);
       const g = await post("/api/grade", { passage: S.book.text, question: q, answer, attempt });
       verdict = g.verdict; action = g.next_action;
       // the tutor's next move (chosen by Muse, bounded by code): praise / hint / re-read together / explain
@@ -795,7 +803,7 @@ async function askQuestions(){
           $("#qappeal").onclick = () => res("appeal"); $("#qnext").onclick = () => res("next"); setTimeout(() => res("next"), 9000);
         });
         if (choice === "appeal") {
-          buddySays(); say("Okay, let me read the story again carefully…");
+          buddySays(); sayL("Okay, let me read the story again carefully…");
           const g2 = await post("/api/appeal", { passage: S.book.text, question: q, answer, verdict_before: verdict, learner: LEARNER(), title: S.book.title });
           if (g2.verdict === "correct") { verdict = "correct"; buddySays("", "correct"); burst(); }
           $("#qproof").innerHTML = proofHTML(g2.quote); await say(g2.feedback, true, BL()); await new Promise(r => setTimeout(r, 900));
@@ -855,7 +863,8 @@ async function reportCard(right, n, learn, sess){
     S.book = await post("/api/book", { title: S.book.title, part: S.book.part + 1, lang: BL() }); showBook(); };
   $("#againbtn").onclick = () => { close(); showBook(); };
   $("#closerep").onclick = () => { close(); $("#controls").innerHTML = `<button class="big" id="nextstory2">✨ Next story</button>`; $("#nextstory2").onclick = freshStory; };
-  await say(`${head} ${up ? `You moved up to level ${ch.level_to}! ` : ""}`, false); if (learn) await say(learn.fact, false, BL());
+  const headL = qp(BL(), right === n ? "Amazing reading, {name}!" : right > 0 ? "Great job, {name}!" : "Good try, {name}!", { name: LEARNER() });
+  await say(`${headL} ${up ? qp(BL(), "You moved up to level {n}!", { n: ch.level_to }) : ""}`, false, BL()); if (learn) await say(learn.fact, false, BL());
 }
 
 // ---------- 👪 parent: feedback summary + review queue (confirmed items become regression tests) ----------

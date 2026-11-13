@@ -10,6 +10,12 @@ from pathlib import Path
 from . import lang as L
 
 DIR = Path(__file__).resolve().parents[1] / "out" / "learners"
+# names used by automated tests: kept out of the parent dashboard, review queue and gold cases
+TEST_PREFIXES = ("e2e", "gen-", "fb-", "fbui", "test", "uitest", "speedtest", "ideatest", "langtest")
+
+
+def is_test(name):
+    return (name or "").lower().startswith(TEST_PREFIXES)
 
 # reading level -> story spec used by the story writer and checked by code
 LEVELS = {
@@ -121,7 +127,7 @@ def all_children():
     for p in sorted(DIR.glob("*.json")):
         prof = json.loads(p.read_text())
         name, lang = prof.get("name", p.stem), prof.get("lang", "en")
-        if name.lower().startswith(("e2e", "gen-", "fb-", "fbui", "test", "uitest", "speedtest", "ideatest", "langtest")):
+        if is_test(name):
             continue                                                     # skip automated-test learners
         kid = kids.setdefault(name.lower(), {"name": name, "langs": {}, "days": {}, "totals": {
             "sessions": 0, "minutes": 0.0, "books": set(), "mastered": 0}})
