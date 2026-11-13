@@ -35,7 +35,6 @@ export default function Library({ loaderData }: Route.ComponentProps) {
       <main className="mx-auto w-full max-w-[1100px] flex-1 px-5 pb-6">
         <div className="mb-6 flex items-center gap-4">
           <Buddy mood="hi" size={100} className="breathe" />
-          <p className="bubble">Pick a book and I will write it just for you, {kid.name}.</p>
         </div>
         {read.length > 0 && (
           <section className="mb-7">
@@ -51,13 +50,15 @@ export default function Library({ loaderData }: Route.ComponentProps) {
         {SHELVES.map((shelf) => (
           <section key={shelf.name} className="mb-7">
             <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {shelf.ideas.map((idea) => {
+              {shelf.ideas.map((idea, at) => {
                 const seed = seedOf(idea);
                 return (
                   <li key={idea} className="h-full">
                     <Cover
                       title={idea[0].toUpperCase() + idea.slice(1)}
                       seed={seed}
+                      draw={`A children's picture-book cover about ${idea}.`}
+                      at={at}
                       label={shelf.name}
                       note="unread"
                       to={`/read?topic=${encodeURIComponent(idea)}`}

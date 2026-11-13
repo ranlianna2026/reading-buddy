@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
@@ -6,21 +7,49 @@ export function Cover({
   title,
   by,
   picture,
+  draw,
   seed = 0,
   label,
   note,
   to,
   n,
+  at = 0,
 }: {
   title: string;
   by?: string;
   picture?: string;
+  draw?: string;
   seed?: number;
   label?: string;
   note?: string;
   to?: string;
   n?: number;
+  at?: number;
 }) {
+  const [drawn, setDrawn] = useState("");
+  const art = picture || drawn;
+
+  // A book in the catalogue has no picture until one is drawn for it; the first visit draws it,
+  // R2 keeps it, and every visit after is instant. Staggered so a shelf does not ask all at once.
+  useEffect(() => {
+    if (picture || !draw) return;
+    let alive = true;
+    const wait = setTimeout(() => {
+      fetch("/api/picture", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, page: draw, kind: "new" }),
+      })
+        .then((res) => (res.ok ? (res.json() as Promise<{ url: string }>) : Promise.reject(new Error("no picture"))))
+        .then((made) => alive && setDrawn(made.url))
+        .catch(() => {});
+    }, at * 450);
+    return () => {
+      alive = false;
+      clearTimeout(wait);
+    };
+  }, [picture, draw, title, at]);
+
   const book = (
     <div className="shelf h-full">
       <article className="book h-full">
@@ -34,8 +63,8 @@ export function Cover({
           </div>
           <p className="mono mt-2.5 px-4 text-muted">{label ?? (n ? `Story ${ROMAN[(n - 1) % 12]}` : "A story")}</p>
           <div className="mt-3 px-4">
-            {picture ? (
-              <img src={picture} alt={`${title}, illustrated`} className="block aspect-[7/6] w-full rounded-sm object-cover" />
+            {art ? (
+              <img src={art} alt={`${title}, illustrated`} className="block aspect-[7/6] w-full rounded-sm object-cover" />
             ) : (
               <Blank title={title} seed={seed} />
             )}

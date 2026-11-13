@@ -24,8 +24,26 @@ export const meta = () => [{ title: "Read · Reading Buddy" }];
 
 function Arrow() {
   return (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+function Speaker() {
+  return (
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none" />
+      <path d="M16.5 8.5a5 5 0 0 1 0 7" />
+      <path d="M19.5 5.5a9 9 0 0 1 0 13" />
+    </svg>
+  );
+}
+
+function Stop() {
+  return (
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden>
+      <rect x="6" y="6" width="12" height="12" rx="2.5" />
     </svg>
   );
 }
@@ -243,7 +261,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
                 <path d="M5.5 11a6.5 6.5 0 0 0 13 0" />
                 <path d="M12 17.5V21M9 21h6" />
               </svg>
-              {listening ? "Listening… say what you want" : "Voice create story"}
+              {listening ? "Listening… say what you want" : "Create story"}
             </button>
           </form>
           {error && <p className="text-berry-ink">{error}</p>}
@@ -268,37 +286,42 @@ export default function Read({ loaderData }: Route.ComponentProps) {
           middle={<Meter at={place} of={story.words} />}
           right={<Hearts n={kid.hearts} />}
         />
-        <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 px-5 md:flex-row md:items-start">
-          <div className="min-w-0 flex-1">
-            <h1 className="mb-1 text-center text-2xl md:text-left">{story.title}</h1>
-            <p className="mb-3 text-center text-sm text-muted md:text-left">by {story.by}</p>
-            <div className="card p-6">
-              <Passage text={story.passage} upTo={listening ? place : figAt} onWord={(word) => say(word, "read")} />
+        <main className="mx-auto w-full max-w-4xl flex-1 px-5">
+          <h1 className="mb-1 text-center text-2xl md:text-left">{story.title}</h1>
+          <p className="mb-3 text-center text-sm text-muted md:text-left">by {story.by}</p>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start">
+            <div className="min-w-0 flex-1">
+              <div className="card p-6">
+                <Passage text={story.passage} upTo={listening ? place : figAt} onWord={(word) => say(word, "read")} />
+              </div>
+              {error && <p className="mt-3 text-center text-berry-ink">{error}</p>}
             </div>
-            {error && <p className="mt-3 text-center text-berry-ink">{error}</p>}
+            <aside className="order-first w-full shrink-0 md:order-last md:sticky md:top-24 md:w-60">
+              <div className="plate">
+                {drawn ? (
+                  <img src={drawn} alt={`${story.title}, illustrated`} className="block w-full rounded-lg" />
+                ) : (
+                  <div className="grid aspect-[4/5] w-full place-items-center rounded-lg bg-sunk">
+                    <span className="mono text-muted">drawing…</span>
+                  </div>
+                )}
+              </div>
+            </aside>
           </div>
-          <aside className="order-first w-full shrink-0 md:order-last md:sticky md:top-24 md:w-60">
-            <div className="plate">
-              {drawn ? (
-                <img src={drawn} alt={`${story.title}, illustrated`} className="block w-full rounded-lg" />
-              ) : (
-                <div className="grid aspect-[4/5] w-full place-items-center rounded-lg bg-sunk">
-                  <span className="mono text-muted">drawing…</span>
-                </div>
-              )}
-            </div>
-            <p className="mono mt-2 text-center text-muted">{drawn ? story.place : "one moment"}</p>
-          </aside>
         </main>
         <ActionBar>
           <Mic on={listening} onClick={listening ? stopReading : startReading} label={listening ? "I'm done" : "Read out-loud"} />
           {!listening && (
             <>
-              <button className="btn btn-quiet" onClick={figAt === undefined ? figReads : () => { hush(); setFigAt(undefined); }}>
-                {figAt === undefined ? "Read to me" : "Stop"}
+              <button
+                className="btn btn-quiet px-5"
+                onClick={figAt === undefined ? figReads : () => { hush(); setFigAt(undefined); }}
+                aria-label={figAt === undefined ? "Read it to me out loud" : "Stop reading it to me"}
+                title={figAt === undefined ? "Read it to me" : "Stop"}
+              >
+                {figAt === undefined ? <Speaker /> : <Stop />}
               </button>
-              <button className="btn btn-sun gap-2 px-5" onClick={quizOnly} aria-label="Finished reading — go to the questions">
-                <Arrow />
+              <button className="btn btn-sun px-5" onClick={quizOnly} aria-label="Finished reading — go to the questions">
                 <Arrow />
               </button>
             </>
