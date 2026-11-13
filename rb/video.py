@@ -3,7 +3,7 @@
 Each page = its picture with a slow pan-and-zoom + narration in the story's language (macOS voices) + big
 captions timed sentence by sentence; a title card first and "The End" last. Built with ffmpeg; nothing uploaded.
 """
-import base64, hashlib, io, json, os, re, subprocess, tempfile
+import base64, hashlib, io, json, os, re, shutil, subprocess, tempfile
 from pathlib import Path
 
 import httpx
@@ -42,7 +42,8 @@ def _clip(image, text, title):
         return pp
     except Exception:
         return None
-FFMPEG = "/opt/homebrew/bin/ffmpeg"
+# ffmpeg: RB_FFMPEG, else whatever is on PATH, else Homebrew's usual place
+FFMPEG = os.environ.get("RB_FFMPEG") or shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
 W, H, FPS = 1280, 720, 30
 VOICES = {"en": "Samantha", "es": "Mónica", "fr": "Thomas", "zh": "Tingting"}
 THE_END = {"en": "The End", "es": "Fin", "fr": "Fin", "zh": "完"}
@@ -137,9 +138,15 @@ def _run(cmd):
 
 
 def _dur(path):
-    out = subprocess.run([FFMPEG.replace("ffmpeg", "ffprobe"), "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
-                         check=True, capture_output=True, text=True).stdout
-    return float(out)
+    """Length in seconds: ffprobe when it's installed next to ffmpeg, else read from ffmpeg's own report."""
+    probe = shutil.which("ffprobe") or FFMPEG.replace("ffmpeg", "ffprobe")
+    if os.path.exists(probe):
+        out = subprocess.run([probe, "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
+                             check=True, capture_output=True, text=True).stdout
+        return float(out)
+    err = subprocess.run([FFMPEG, "-i", str(path)], capture_output=True, text=True).stderr
+    h, m, sec = re.search(r"Duration: (\d+):(\d+):([\d.]+)", err).groups()
+    return int(h) * 3600 + int(m) * 60 + float(sec)
 
 
 def make_video(title, pages, lang="en", reader="", animate=False):
