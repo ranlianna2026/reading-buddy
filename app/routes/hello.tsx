@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
 import { Buddy } from "~/components/buddy";
-import { Star } from "~/components/icons";
 import { Focus, Screen } from "~/components/chrome";
 import { fields, post, send } from "~/lib/api";
 import { GRADES, SPAN } from "~/lib/grades";
@@ -131,7 +130,7 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
   return (
     <Screen id="page-hello">
       <Focus intro={mode + String(byEmail)} className="max-w-sm">
-        <Star size={54} />
+        <Buddy mood="hi" size={180} className="breathe" />
         <h1 className="text-4xl">Reading Buddy</h1>
         <p className="text-muted">Pick a story, read it out loud, then talk about it.</p>
 
