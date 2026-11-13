@@ -1,4 +1,4 @@
-# 📚 Reading Buddy
+# 📚 Learning Buddy
 
 A voice reading tutor for kids. Pick a book, read it aloud, then talk about it.
 

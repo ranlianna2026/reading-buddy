@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reading Buddy</title>
+<title>Learning Buddy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -170,7 +170,9 @@
   .langbar button { font-size:15px; padding:7px 14px; border-radius:20px; background:#fff; color:var(--ink); border:2px solid #efe3c9; box-shadow:0 3px 0 #efe3c9; }
   .langbar button.on { background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:0 3px 0 #4b3fc4; }
   .flag { font-size:18px; margin-left:6px; }
-  #parentbtn { margin-left:10px; }
+  #parentbtn { margin-left:10px; } #homebtn { margin-left:auto; margin-right:10px; }
+  .reader { margin-left:0 !important; }
+  .qhome { position:absolute; right:16px; top:14px; font-size:14px; padding:6px 12px; z-index:2; }
   .redraw { position:absolute; right:10px; top:8px; background:rgba(255,255,255,.92); color:var(--accent); border:2px solid #e3dfff;
             box-shadow:none; font-size:13px; padding:5px 10px; border-radius:12px; }
   .reasons { display:flex; gap:6px; flex-wrap:wrap; }
@@ -285,8 +287,9 @@
 </head>
 <body>
 <header>
-  <div class="logo">📚</div>
-  <div><h1>Reading <span>Buddy</span></h1><div class="tag">Read aloud. Talk about it. Grow every day.</div></div>
+  <div class="logo" id="homelogo" title="Home" style="cursor:pointer">📚</div>
+  <div id="homelink" title="Home" style="cursor:pointer"><h1>Learning <span>Buddy</span></h1><div class="tag">Read aloud. Talk about it. Grow every day.</div></div>
+  <button class="ghost small" id="homebtn" title="Back to the home page">🏠 Home</button>
   <label class="reader">👤 Reader <input type="text" id="learner" title="Who is reading?"></label>
   <label class="reader age" id="agebox" title="How old is the reader? Stories and questions are made for this age">🎂 Age
     <select id="age"><option value="">?</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select></label>
@@ -329,6 +332,7 @@
         <div class="tools">
           <span id="controls"></span>
           <button class="ghost small" id="listen">🔊 Listen</button>
+          <button class="ghost small" id="moviebtn" title="Make a movie of this story">🎬 Movie</button>
           <button class="ghost small" id="newstory">📚 New story</button>
         </div>
       </div>
@@ -538,6 +542,7 @@ async function drawPicture(body, tries = 2){
 // from a reference picture; with no reference at all, page 1 is drawn from scratch and becomes the reference.
 async function planPictures(){
   const b = S.book, token = S.bookToken = Math.random();
+  if (b.page_images) { S.pages.forEach((p, i) => { p.gen = b.page_images[i] || null; p.pending = false; }); showPage(S.page); return; }
   const cast = b.plan ? `${b.plan.characters}. Setting: ${b.plan.setting}` : "";
   const story = b.via === "story", photo = b.via === "muse-vision";
   const firstImg = (S.pages.find(p => p.img) || {}).img || null;
@@ -652,6 +657,9 @@ $("#newstory").onclick = () => { stopListen(); if (reader && reader.st.on) stopR
 
 // ---------- flow ----------
 async function loadBook(title){
+  if (title.startsWith("demo:")) {                       // saved demo story: text + pictures, no AI wait
+    S.book = await fetch("/api/demo/" + title.slice(5)).then(r => r.json()); S.book.imgs = []; S.storyImgs = []; S.idea = ""; showBook(); return;
+  }
   // the server decides: a real book if we can find it, otherwise (or for "teach me about...") a story written for this child
   const steps = [`📚 Looking for <b>${esc(title)}</b>…`, "🦉 Checking my bookshelf…", "✍️ Not on the shelf? I'll write it for you…",
                  "🦊 Imagining the characters…", "🌍 Finding true facts…", "🎨 Getting the pictures ready…", "📖 Almost ready…"];
@@ -752,7 +760,7 @@ function proofHTML(quote){                          // the supporting sentence, 
   return `<div class="proof"><div class="t"><small>📖 From the story</small><mark>${quote}</mark></div></div>`;
 }
 function quizCard(i, n, q){
-  $("#qcard").innerHTML = `
+  $("#qcard").innerHTML = `<button class="ghost small qhome" id="qhome" title="Leave the quiz and go home">🏠</button>
     <div class="qtop"><span class="qdots">${S.answers.map(a => `<span class="${a.verdict === "correct" ? "correct" : "miss"}"></span>`).join("")}${Array.from({length: n - S.answers.length}, (_, k) => `<span class="${k === 0 ? "on" : ""}"></span>`).join("")}</span>
       <span class="qnum">Question ${i + 1} of ${n}</span><span class="qkind">${KIND[q.kind] || q.kind}</span></div>
     <div class="qask"><div class="face">🦉</div><div class="qtext">${q.question}</div></div>
@@ -764,6 +772,7 @@ function quizCard(i, n, q){
     <div id="qproof"></div>
     <div class="qactions"><span><button class="ghost small" id="qagain">🔁 Hear it again</button> <button class="ghost small" id="qhint">💡 Hint</button></span><button class="ghost small" id="qskip">Skip ›</button></div>`;
   $("#qagain").onclick = () => { speechSynthesis.cancel(); say(q.question, false, BL()); };
+  $("#qhome").onclick = goHome;
   $("#qhint").onclick = () => { $("#qproof").innerHTML = proofHTML(q.quote).replace("📖 From the story", "💡 Look here in the story"); sayL("Look at this part of the story!"); };
   $("#qskip").onclick = () => { S.skipQ = true; speechSynthesis.cancel(); S.abortListen && S.abortListen(); };
 }
@@ -806,10 +815,12 @@ async function askQuestions(){
     $("#qretry").onclick = () => { S.qsPromise = null; $("#qcard").innerHTML = loadCard("❓ One more try…"); askQuestions(); }; return;
   }
   const { questions, learn_topic } = qd; S.questions = questions; S.learnTopic = learn_topic;
+  S.quitQuiz = false;
   const learnP = learn_topic ? post("/api/learn", { topic: learn_topic, title: S.book.title }).catch(() => null) : Promise.resolve(null);
   $("#quiz").hidden = false;
   let right = 0; S.answers = [];
   for (let i = 0; i < questions.length; i++) {
+    if (S.quitQuiz) return;
     const q = questions[i]; quizCard(i, questions.length, q); S.skipQ = false; S.silent = 0;
     S.sayTarget = "#qsay"; S.heardTarget = "#qheard";
     let verdict = "not_yet", action = "hint_retry";
@@ -872,6 +883,7 @@ async function askQuestions(){
     S.answers.push({ kind: q.kind, verdict, word: q.word || "" });
   }
   S.sayTarget = null; S.heardTarget = null;
+  if (S.quitQuiz) return;
   $("#comp").textContent = `${right}/${questions.length}`;
   $("#qcard").innerHTML = `<div class="rhead"><div class="stars">${"⭐".repeat(Math.max(1, right))}${"☆".repeat(questions.length - right)}</div><h2>Putting your report card together…</h2><span class="spinner"></span></div>`;
   const [learn, sess] = await Promise.all([learnP,
@@ -897,7 +909,7 @@ async function reportCard(right, n, learn, sess){
       <div class="reasons" id="fbreasons" style="margin-top:8px" hidden>${[["too_hard","Too hard"],["too_easy","Too easy"],["boring","Boring"],["scary","Too scary"],["wrong_language","Wrong language"],["loved_it","Loved it!"]].map(([k,v]) => `<button data-k="${k}">${v}</button>`).join("")}</div>
       <div id="fbthanks" style="color:var(--good);font-weight:800;margin-top:6px"></div>
     </div>
-    <div class="rbtns"><button class="big" id="nextstory">✨ Make my next story</button>
+    <div class="rbtns"><button class="big" id="nextstory">✨ Make my next story</button><button class="ghost" id="repmovie">🎬 Make a movie</button>
       ${next ? `<button class="ghost" id="nextbtn">Read the next part ➡️</button>` : ""}<button class="ghost" id="againbtn">🔁 Read it again</button>
       <button class="ghost" id="closerep">Close</button></div>`;
   if (right === n) burst();
@@ -914,6 +926,7 @@ async function reportCard(right, n, learn, sess){
   document.querySelectorAll(".rrow .chips span").forEach(el => el.onclick = () => say(el.textContent.replace(" 🔊",""), false, BL()));
   const close = () => { $("#quiz").hidden = true; speechSynthesis.cancel(); };
   $("#nextstory").onclick = () => { close(); freshStory(); };
+  $("#repmovie").onclick = () => makeMovie(false);
   if (next) $("#nextbtn").onclick = async () => { close(); $("#controls").innerHTML = `<span class="spinner"></span>`;
     S.book = await post("/api/book", { title: S.book.title, part: S.book.part + 1, lang: BL() }); showBook(); };
   $("#againbtn").onclick = () => { close(); showBook(); };
@@ -1018,6 +1031,44 @@ async function makeStory(sequel = false){
   S.book = { ...j, imgs: S.storyImgs }; showBook();
 }
 $("#makestory").onclick = () => { S.idea = ""; makeStory(false); };
+// 🎬 story movie: page pictures + narration in the story's language + captions, made on the server with ffmpeg
+async function makeMovie(animate = false){
+  stopListen(); $("#quiz").hidden = false;
+  $("#qcard").innerHTML = loadCard(animate ? "✨ Bringing your pictures to life…" : "🎬 Making your movie…",
+    animate ? "The video model on this computer is animating every page. This takes a few minutes ☕" : "Drawing any missing pictures, recording the narration, adding captions…");
+  for (let i = 0; i < 120 && S.pages.some(p => p.pending); i++) await new Promise(r => setTimeout(r, 500));   // wait for pictures
+  const pages = S.pages.map(p => ({ text: p.text, image: p.gen || p.img || "" }));
+  try {
+    const r = await post("/api/video", { title: S.book.title, pages, reader: LEARNER(), animate });
+    const anim = animate ? null : await fetch("/api/anim").then(x => x.json()).catch(() => null);
+    $("#qcard").innerHTML = `<button class="ghost small qhome" id="mvclose">✕</button>
+      <div class="rhead"><h2>🎬 ${S.book.title}</h2><div style="color:var(--muted);font-weight:700">A movie of your story, ready in ${r.seconds}s</div></div>
+      <video src="${r.url}" controls autoplay playsinline style="width:100%;border-radius:20px;margin-top:12px;background:#000"></video>
+      <div class="rbtns"><a class="dl" href="${r.url}" download="${S.book.title.replace(/[^\p{L}\p{N} ]/gu, "").trim() || "story"}.mp4"><button class="big">⬇️ Download</button></a>
+        ${anim && anim.available ? `<button class="ghost" id="mvanim">✨ Make it move (AI animation)</button>` : ""}
+        <button class="ghost" id="mvdone">Close</button></div>`;
+    if ($("#mvanim")) $("#mvanim").onclick = () => { $("#qcard video")?.pause(); makeMovie(true); };
+    const close = () => { $("#qcard video")?.pause(); $("#quiz").hidden = true; };
+    $("#mvclose").onclick = close; $("#mvdone").onclick = close;
+  } catch (e) {
+    $("#qcard").innerHTML = `<div class="loadcard"><div class="big-emoji">🙈</div><h2>Oops, the movie didn't work</h2><button class="big" id="mvretry">🔁 Try again</button> <button class="ghost" id="mvx">Close</button></div>`;
+    $("#mvretry").onclick = () => makeMovie(animate); $("#mvx").onclick = () => { $("#quiz").hidden = true; };
+  }
+}
+$("#moviebtn").onclick = () => makeMovie(false);
+function goHome(){
+  S.skipQ = true; S.quitQuiz = true; S.abortListen && S.abortListen();       // stop a running quiz
+  stopListen(); speechSynthesis.cancel(); clearTimeout(S.autoDone);
+  if (reader && reader.st.on) stopReading();
+  S.finishing = false; S.sayTarget = null; S.heardTarget = null;
+  $("#qcard video")?.pause(); $("#quiz").hidden = true; $("#qcard").innerHTML = ""; $("#parent").hidden = true; $("#wordpop").hidden = true;
+  $("#book").hidden = true; $("#chooser").hidden = false; $("#langbar").hidden = false;
+  $("#controls").innerHTML = ""; $("#loading").innerHTML = ""; $("#heard").textContent = "";
+  document.body.classList.remove("mic-on"); window.scrollTo({ top: 0, behavior: "smooth" });
+  loadProfile();
+  $("#say").innerHTML = `Hi ${LEARNER()}! 🦉 Do you want to <b>read a book</b>, or <b>make your own story</b>?`;
+}
+["#homebtn", "#homelogo", "#homelink"].forEach(id => $(id).onclick = goHome);
 function freshStory(){                 // a brand-new story (not a sequel); her practice words are woven in automatically
   stopListen(); S.book = null; S.storyFiles = []; S.storyImgs = []; S.idea = ""; $("#thumbs").innerHTML = ""; $("#idea").value = "";
   $("#book").hidden = true; $("#chooser").hidden = false; $("#langbar").hidden = false; $("#controls").innerHTML = ""; loadProfile();

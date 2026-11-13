@@ -8,7 +8,7 @@ window.LANGS = {
   ar: { label: "🌙 العربية", speech: "ar-SA", cjk: false, rtl: true, voices: /Majed|Maged|Laila|Tarik|Google العربية|Arabic/i },
 };
 window.QUICK = {
-  en: [["🐰 Velveteen Rabbit", "The Velveteen Rabbit"], ["🥕 Peter Rabbit", "The Tale of Peter Rabbit"], ["🦊 Fox & Grapes", "The Fox and the Grapes"]],
+  en: [["🐉 Demo: Pip and the Fireflies", "demo:pip"], ["🐰 Velveteen Rabbit", "The Velveteen Rabbit"], ["🥕 Peter Rabbit", "The Tale of Peter Rabbit"], ["🦊 Fox & Grapes", "The Fox and the Grapes"]],
   es: [["🦊 La zorra y las uvas", "La zorra y las uvas"], ["📚 Fábulas de Samaniego", "Fábulas de Samaniego"]],
   fr: [["🦊 Le renard et les raisins", "Le renard et les raisins"], ["📚 Fables de La Fontaine", "Fables de La Fontaine"]],
   zh: [["🦊 狐狸和葡萄", "狐狸和葡萄"]],
