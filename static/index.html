@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reading Buddy</title>
+<title>Learning Buddy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -280,7 +280,7 @@
 <body>
 <header>
   <div class="logo" id="homelogo" title="Home" style="cursor:pointer">📚</div>
-  <div id="homelink" title="Home" style="cursor:pointer"><h1>Reading <span>Buddy</span></h1><div class="tag">Read aloud. Talk about it. Grow every day.</div></div>
+  <div id="homelink" title="Home" style="cursor:pointer"><h1>Learning <span>Buddy</span></h1><div class="tag">Read aloud. Talk about it. Grow every day.</div></div>
   <button class="ghost small" id="homebtn" title="Back to the home page">🏠 Home</button>
   <label class="reader">👤 Reader <input type="text" id="learner" title="Who is reading?"></label>
   <button class="ghost small" id="parentbtn" title="Feedback and review for grown-ups">👪 Parent</button>
@@ -322,6 +322,7 @@
         <div class="tools">
           <span id="controls"></span>
           <button class="ghost small" id="listen">🔊 Listen</button>
+          <button class="ghost small" id="moviebtn" title="Make a movie of this story">🎬 Movie</button>
           <button class="ghost small" id="newstory">📚 New story</button>
         </div>
       </div>
@@ -849,7 +850,7 @@ async function reportCard(right, n, learn, sess){
       <div class="reasons" id="fbreasons" style="margin-top:8px" hidden>${[["too_hard","Too hard"],["too_easy","Too easy"],["boring","Boring"],["scary","Too scary"],["wrong_language","Wrong language"],["loved_it","Loved it!"]].map(([k,v]) => `<button data-k="${k}">${v}</button>`).join("")}</div>
       <div id="fbthanks" style="color:var(--good);font-weight:800;margin-top:6px"></div>
     </div>
-    <div class="rbtns"><button class="big" id="nextstory">✨ Make my next story</button>
+    <div class="rbtns"><button class="big" id="nextstory">✨ Make my next story</button><button class="ghost" id="repmovie">🎬 Make a movie</button>
       ${next ? `<button class="ghost" id="nextbtn">Read the next part ➡️</button>` : ""}<button class="ghost" id="againbtn">🔁 Read it again</button>
       <button class="ghost" id="closerep">Close</button></div>`;
   if (right === n) burst();
@@ -866,6 +867,7 @@ async function reportCard(right, n, learn, sess){
   document.querySelectorAll(".rrow .chips span").forEach(el => el.onclick = () => say(el.textContent.replace(" 🔊",""), false, BL()));
   const close = () => { $("#quiz").hidden = true; speechSynthesis.cancel(); };
   $("#nextstory").onclick = () => { close(); freshStory(); };
+  $("#repmovie").onclick = makeMovie;
   if (next) $("#nextbtn").onclick = async () => { close(); $("#controls").innerHTML = `<span class="spinner"></span>`;
     S.book = await post("/api/book", { title: S.book.title, part: S.book.part + 1, lang: BL() }); showBook(); };
   $("#againbtn").onclick = () => { close(); showBook(); };
@@ -954,12 +956,33 @@ async function makeStory(sequel = false){
   S.book = j; showBook();
 }
 $("#makestory").onclick = () => { S.idea = ""; makeStory(false); };
+// 🎬 story movie: page pictures + narration in the story's language + captions, made on the server with ffmpeg
+async function makeMovie(){
+  stopListen(); $("#quiz").hidden = false;
+  $("#qcard").innerHTML = loadCard("🎬 Making your movie…", "Drawing any missing pictures, recording the narration, adding captions…");
+  for (let i = 0; i < 120 && S.pages.some(p => p.pending); i++) await new Promise(r => setTimeout(r, 500));   // wait for pictures
+  const pages = S.pages.map(p => ({ text: p.text, image: p.gen || p.img || "" }));
+  try {
+    const r = await post("/api/video", { title: S.book.title, pages, reader: LEARNER() });
+    $("#qcard").innerHTML = `<button class="ghost small qhome" id="mvclose">✕</button>
+      <div class="rhead"><h2>🎬 ${S.book.title}</h2><div style="color:var(--muted);font-weight:700">A movie of your story, ready in ${r.seconds}s</div></div>
+      <video src="${r.url}" controls autoplay playsinline style="width:100%;border-radius:20px;margin-top:12px;background:#000"></video>
+      <div class="rbtns"><a class="dl" href="${r.url}" download="${S.book.title.replace(/[^\p{L}\p{N} ]/gu, "").trim() || "story"}.mp4"><button class="big">⬇️ Download</button></a>
+        <button class="ghost" id="mvdone">Close</button></div>`;
+    const close = () => { $("#qcard video")?.pause(); $("#quiz").hidden = true; };
+    $("#mvclose").onclick = close; $("#mvdone").onclick = close;
+  } catch (e) {
+    $("#qcard").innerHTML = `<div class="loadcard"><div class="big-emoji">🙈</div><h2>Oops, the movie didn't work</h2><button class="big" id="mvretry">🔁 Try again</button> <button class="ghost" id="mvx">Close</button></div>`;
+    $("#mvretry").onclick = makeMovie; $("#mvx").onclick = () => { $("#quiz").hidden = true; };
+  }
+}
+$("#moviebtn").onclick = makeMovie;
 function goHome(){
   S.skipQ = true; S.quitQuiz = true; S.abortListen && S.abortListen();       // stop a running quiz
   stopListen(); speechSynthesis.cancel(); clearTimeout(S.autoDone);
   if (reader && reader.st.on) stopReading();
   S.finishing = false; S.sayTarget = null; S.heardTarget = null;
-  $("#quiz").hidden = true; $("#qcard").innerHTML = ""; $("#parent").hidden = true; $("#wordpop").hidden = true;
+  $("#qcard video")?.pause(); $("#quiz").hidden = true; $("#qcard").innerHTML = ""; $("#parent").hidden = true; $("#wordpop").hidden = true;
   $("#book").hidden = true; $("#chooser").hidden = false; $("#langbar").hidden = false;
   $("#controls").innerHTML = ""; $("#loading").innerHTML = ""; $("#heard").textContent = "";
   document.body.classList.remove("mic-on"); window.scrollTo({ top: 0, behavior: "smooth" });

@@ -1,4 +1,4 @@
-"""Reading Buddy: voice reading tutor. Run: .venv/bin/uvicorn app:app --port 8010"""
+"""Learning Buddy: voice reading tutor. Run: .venv/bin/uvicorn app:app --port 8010"""
 import time
 from pathlib import Path
 
@@ -9,9 +9,11 @@ from pydantic import BaseModel
 
 from rb import books, feedback, learner, meta_api, scoring, story, tutor
 
-app = FastAPI(title="Reading Buddy")
+app = FastAPI(title="Learning Buddy")
 STATIC = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
+(Path(__file__).parent / "out" / "videos").mkdir(parents=True, exist_ok=True)
+app.mount("/videos", StaticFiles(directory=Path(__file__).parent / "out" / "videos"), name="videos")
 
 
 @app.get("/api/langs")
@@ -233,3 +235,21 @@ def parent_dashboard():
 def parent_sample():
     learner.make_samples()
     return parent_dashboard()
+
+
+class VideoReq(BaseModel):
+    title: str
+    pages: list[dict]       # [{text, image}] image = data URL or http URL
+    lang: str = "en"
+    reader: str = ""
+
+
+@app.post("/api/video")
+def make_movie(req: VideoReq):
+    from rb import video
+    t0 = time.time()
+    try:
+        path = video.make_video(req.title, req.pages, req.lang, req.reader)
+    except Exception as e:
+        raise HTTPException(500, f"could not make the movie: {str(e)[:200]}")
+    return {"url": f"/videos/{path.name}", "seconds": round(time.time() - t0, 1)}

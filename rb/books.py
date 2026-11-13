@@ -23,7 +23,7 @@ _client = None
 def kclient():
     global _client
     if _client is None:
-        _client = Keenable(client_source="Reading Buddy")  # uses KEENABLE_API_KEY if set, else keyless
+        _client = Keenable(client_source="Learning Buddy")  # uses KEENABLE_API_KEY if set, else keyless
     return _client
 
 
@@ -73,7 +73,7 @@ def ksearch(query, **params):
     """Keenable search over REST (the 0.1.5 SDK lacks safety_mode). Kid app: always safety_mode=strict."""
     key = os.environ.get("KEENABLE_API_KEY")
     url = "https://api.keenable.ai/v1/search" + ("" if key else "/public")
-    headers = {"X-Keenable-Title": "Reading Buddy", **({"X-API-Key": key} if key else {})}
+    headers = {"X-Keenable-Title": "Learning Buddy", **({"X-API-Key": key} if key else {})}
     r = httpx.post(url, json={"query": query, "safety_mode": "strict", **params}, headers=headers, timeout=20)
     r.raise_for_status()
     return [SimpleNamespace(title=x.get("title", ""), url=x["url"], snippet=x.get("snippet", ""))
