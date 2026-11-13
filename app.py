@@ -242,6 +242,7 @@ class VideoReq(BaseModel):
     pages: list[dict]       # [{text, image}] image = data URL or http URL
     lang: str = "en"
     reader: str = ""
+    animate: bool = False   # use the local AI video model (LTX-Video) when it is running
 
 
 @app.post("/api/video")
@@ -249,7 +250,52 @@ def make_movie(req: VideoReq):
     from rb import video
     t0 = time.time()
     try:
-        path = video.make_video(req.title, req.pages, req.lang, req.reader)
+        path = video.make_video(req.title, req.pages, req.lang, req.reader, req.animate)
     except Exception as e:
         raise HTTPException(500, f"could not make the movie: {str(e)[:200]}")
     return {"url": f"/videos/{path.name}", "seconds": round(time.time() - t0, 1)}
+
+
+@app.get("/api/anim")
+def anim_status():
+    from rb import video
+    st = video.anim_status()
+    return {"available": bool(st), **(st or {})}
+
+
+# ---------------- instant demo stories (saved story + pictures, so a live demo never waits on AI) ----------------
+DEMO = STATIC / "demo"
+
+
+class DemoSave(BaseModel):
+    slug: str
+    book: dict
+    images: list[str]       # data URLs, one per page
+
+
+@app.post("/api/demo/save")
+def demo_save(req: DemoSave):
+    import base64, json, re as _re
+    slug = _re.sub(r"[^a-z0-9-]", "", req.slug.lower()) or "demo"
+    d = DEMO / slug
+    d.mkdir(parents=True, exist_ok=True)
+    urls = []
+    for i, img in enumerate(req.images):
+        if img and img.startswith("data:"):
+            (d / f"p{i}.jpg").write_bytes(base64.b64decode(img.split(",", 1)[1]))
+            urls.append(f"/static/demo/{slug}/p{i}.jpg")
+        else:
+            urls.append(img or "")
+    book = {k: v for k, v in req.book.items() if k not in ("cover",)}
+    book.update({"page_images": urls, "demo": slug})
+    (d / "story.json").write_text(json.dumps(book, ensure_ascii=False, indent=1))
+    return {"ok": True, "slug": slug, "pictures": sum(1 for u in urls if u)}
+
+
+@app.get("/api/demo/{slug}")
+def demo_load(slug: str):
+    import json
+    f = DEMO / slug / "story.json"
+    if not f.exists():
+        raise HTTPException(404, "no such demo")
+    return json.loads(f.read_text())

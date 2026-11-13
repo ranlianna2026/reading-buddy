@@ -3,7 +3,7 @@
 Each page = its picture with a slow pan-and-zoom + narration in the story's language (macOS voices) + big
 captions timed sentence by sentence; a title card first and "The End" last. Built with ffmpeg; nothing uploaded.
 """
-import base64, hashlib, io, json, re, subprocess, tempfile
+import base64, hashlib, io, json, os, re, subprocess, tempfile
 from pathlib import Path
 
 import httpx
@@ -13,6 +13,35 @@ from . import lang as L
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "out" / "videos"
+CLIPS = ROOT / "out" / "clips"
+ANIM_URL = os.environ.get("RB_ANIM_URL", "http://127.0.0.1:8020")     # local LTX-Video service (~/IdeaProjects/local-video)
+
+
+def anim_status():
+    try:
+        return httpx.get(ANIM_URL + "/health", timeout=1.5).json()
+    except Exception:
+        return None
+
+
+def _clip(image, text, title):
+    """Animate one page picture with the local video model (cached). Returns a ping-pong loopable mp4, or None."""
+    key = hashlib.sha1(f"{image[:300]}|{len(image)}|{text}".encode()).hexdigest()[:16]
+    CLIPS.mkdir(parents=True, exist_ok=True)
+    pp = CLIPS / f"{key}_pp.mp4"
+    if pp.exists():
+        return pp
+    try:
+        r = httpx.post(ANIM_URL + "/animate", json={"image": image, "prompt": f"{title}: {text[:300]}"}, timeout=900)
+        r.raise_for_status()
+        raw = CLIPS / f"{key}.mp4"
+        raw.write_bytes(base64.b64decode(r.json()["mp4"].split(",", 1)[1]))
+        _run([FFMPEG, "-v", "error", "-y", "-i", str(raw), "-filter_complex",
+              "[0:v]split[a][b];[b]reverse[r];[a][r]concat=n=2:v=1:a=0[v]", "-map", "[v]", "-c:v", "libx264",
+              "-preset", "veryfast", "-crf", "20", str(pp)])
+        return pp
+    except Exception:
+        return None
 FFMPEG = "/opt/homebrew/bin/ffmpeg"
 W, H, FPS = 1280, 720, 30
 VOICES = {"en": "Samantha", "es": "Mónica", "fr": "Thomas", "zh": "Tingting"}
@@ -31,7 +60,10 @@ def _load(img):
     if not img:
         return None
     try:
-        raw = base64.b64decode(img.split(",", 1)[1]) if img.startswith("data:") else httpx.get(img, timeout=20, follow_redirects=True).content
+        if img.startswith("/static/"):                                    # demo pictures stored in the repo
+            raw = (ROOT / img.lstrip("/")).read_bytes()
+        else:
+            raw = base64.b64decode(img.split(",", 1)[1]) if img.startswith("data:") else httpx.get(img, timeout=20, follow_redirects=True).content
         return Image.open(io.BytesIO(raw)).convert("RGB")
     except Exception:
         return None
@@ -110,9 +142,9 @@ def _dur(path):
     return float(out)
 
 
-def make_video(title, pages, lang="en", reader=""):
+def make_video(title, pages, lang="en", reader="", animate=False):
     """pages: [{text, image}] where image is a data URL or http URL (or empty). Returns the mp4 path."""
-    key = hashlib.sha1(json.dumps([title, lang, [(p["text"], (p.get("image") or "")[:200], len(p.get("image") or ""))
+    key = hashlib.sha1(json.dumps([title, lang, bool(animate), [(p["text"], (p.get("image") or "")[:200], len(p.get("image") or ""))
                                                  for p in pages]]).encode()).hexdigest()[:16]
     OUT.mkdir(parents=True, exist_ok=True)
     final = OUT / f"{key}.mp4"
@@ -142,7 +174,8 @@ def make_video(title, pages, lang="en", reader=""):
                 a = td / f"p{i}_{j}.aiff"
                 _run(["say", "-v", voice, "-r", "160" if lang == "en" else "170", "-o", str(a), snt])
                 auds.append((snt, a, _dur(a)))
-            segs.append(_page(td, i, td / f"p{i}.png", auds, lang))
+            clip = _clip(p.get("image") or "", p["text"], title) if animate and p.get("image") else None
+            segs.append(_page(td, i, td / f"p{i}.png", auds, lang, clip))
         _card(THE_END.get(lang, "The End"), "", cover, lang).save(td / "end.png")
         _run(["say", "-v", voice, "-o", str(td / "end.aiff"), THE_END.get(lang, "The End")])
         segs.append(_still(td, "end", td / "end.png", td / "end.aiff", hold=1.5))
@@ -162,7 +195,7 @@ def _still(td, name, png, aiff, hold=1.0):
     return out
 
 
-def _page(td, i, png, auds, lang):
+def _page(td, i, png, auds, lang, clip=None):
     gap = 0.35
     total = sum(d for _, _, d in auds) + gap * len(auds) + 0.6
     frames = int(total * FPS)
@@ -177,7 +210,10 @@ def _page(td, i, png, auds, lang):
     # video: slow pan-and-zoom (alternating direction), captions overlaid per sentence
     zin = i % 2 == 0
     z = f"'min(1+0.12*on/{frames},1.12)'" if zin else f"'max(1.12-0.12*on/{frames},1.0)'"
-    vf = [f"[0:v]zoompan=z={z}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={W}x{H}:fps={FPS},format=yuva420p[v0]"]
+    if clip:   # AI-animated page: loop the ping-pong clip for the length of the narration
+        vf = [f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},setsar=1,fps={FPS},format=yuva420p[v0]"]
+    else:
+        vf = [f"[0:v]zoompan=z={z}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={W}x{H}:fps={FPS},format=yuva420p[v0]"]
     last = "v0"
     cap_inputs = []
     for k, (s0, s1, snt) in enumerate(cues):
@@ -189,7 +225,8 @@ def _page(td, i, png, auds, lang):
         last = f"c{k}"
     vf.append(f"[{last}]format=yuv420p,fade=t=in:st=0:d=0.35[vout]")
     out = td / f"p{i}.mp4"
-    _run([FFMPEG, "-v", "error", "-y", "-loop", "1", "-framerate", str(FPS), "-i", str(png), *ins, *cap_inputs,
+    src = ["-stream_loop", "-1", "-i", str(clip)] if clip else ["-loop", "1", "-framerate", str(FPS), "-i", str(png)]
+    _run([FFMPEG, "-v", "error", "-y", *src, *ins, *cap_inputs,
           "-filter_complex", ";".join(filt + vf), "-map", "[vout]", "-map", "[aout]", "-t", f"{total:.2f}",
           "-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-c:a", "aac", "-ar", "44100", "-ac", "2", str(out)])
     return out

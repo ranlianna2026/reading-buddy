@@ -516,6 +516,7 @@ async function drawPicture(body, tries = 2){
 // Muse Image: pages that would repeat a picture (or have none) get a new one drawn from the original picture
 async function planPictures(){
   const b = S.book, token = S.bookToken = Math.random(); let prev = null, ref = null;
+  if (b.page_images) { S.pages.forEach((p, i) => { p.gen = b.page_images[i] || null; p.pending = false; }); showPage(S.page); return; }
   const todo = [];
   const cast = b.plan ? `${b.plan.characters}. Setting: ${b.plan.setting}` : "";
   const noPictures = b.via !== "story" && b.via !== "muse-vision" && !S.pages.some(p => p.img);
@@ -611,6 +612,9 @@ $("#newstory").onclick = () => { stopListen(); if (reader && reader.st.on) stopR
 
 // ---------- flow ----------
 async function loadBook(title){
+  if (title.startsWith("demo:")) {                       // saved demo story: text + pictures, no AI wait
+    S.book = await fetch("/api/demo/" + title.slice(5)).then(r => r.json()); S.storyImgs = []; S.idea = ""; showBook(); return;
+  }
   $("#loading").innerHTML = `<span class="spinner"></span> Finding <b>${title}</b>…`;
   say(`Great choice! Let me find ${title}.`);
   try { S.book = await post("/api/book", { title, lang: S.lang }); }
@@ -867,7 +871,7 @@ async function reportCard(right, n, learn, sess){
   document.querySelectorAll(".rrow .chips span").forEach(el => el.onclick = () => say(el.textContent.replace(" 🔊",""), false, BL()));
   const close = () => { $("#quiz").hidden = true; speechSynthesis.cancel(); };
   $("#nextstory").onclick = () => { close(); freshStory(); };
-  $("#repmovie").onclick = makeMovie;
+  $("#repmovie").onclick = () => makeMovie(false);
   if (next) $("#nextbtn").onclick = async () => { close(); $("#controls").innerHTML = `<span class="spinner"></span>`;
     S.book = await post("/api/book", { title: S.book.title, part: S.book.part + 1, lang: BL() }); showBook(); };
   $("#againbtn").onclick = () => { close(); showBook(); };
@@ -957,26 +961,30 @@ async function makeStory(sequel = false){
 }
 $("#makestory").onclick = () => { S.idea = ""; makeStory(false); };
 // 🎬 story movie: page pictures + narration in the story's language + captions, made on the server with ffmpeg
-async function makeMovie(){
+async function makeMovie(animate = false){
   stopListen(); $("#quiz").hidden = false;
-  $("#qcard").innerHTML = loadCard("🎬 Making your movie…", "Drawing any missing pictures, recording the narration, adding captions…");
+  $("#qcard").innerHTML = loadCard(animate ? "✨ Bringing your pictures to life…" : "🎬 Making your movie…",
+    animate ? "The video model on this computer is animating every page. This takes a few minutes ☕" : "Drawing any missing pictures, recording the narration, adding captions…");
   for (let i = 0; i < 120 && S.pages.some(p => p.pending); i++) await new Promise(r => setTimeout(r, 500));   // wait for pictures
   const pages = S.pages.map(p => ({ text: p.text, image: p.gen || p.img || "" }));
   try {
-    const r = await post("/api/video", { title: S.book.title, pages, reader: LEARNER() });
+    const r = await post("/api/video", { title: S.book.title, pages, reader: LEARNER(), animate });
+    const anim = animate ? null : await fetch("/api/anim").then(x => x.json()).catch(() => null);
     $("#qcard").innerHTML = `<button class="ghost small qhome" id="mvclose">✕</button>
       <div class="rhead"><h2>🎬 ${S.book.title}</h2><div style="color:var(--muted);font-weight:700">A movie of your story, ready in ${r.seconds}s</div></div>
       <video src="${r.url}" controls autoplay playsinline style="width:100%;border-radius:20px;margin-top:12px;background:#000"></video>
       <div class="rbtns"><a class="dl" href="${r.url}" download="${S.book.title.replace(/[^\p{L}\p{N} ]/gu, "").trim() || "story"}.mp4"><button class="big">⬇️ Download</button></a>
+        ${anim && anim.available ? `<button class="ghost" id="mvanim">✨ Make it move (AI animation)</button>` : ""}
         <button class="ghost" id="mvdone">Close</button></div>`;
+    if ($("#mvanim")) $("#mvanim").onclick = () => { $("#qcard video")?.pause(); makeMovie(true); };
     const close = () => { $("#qcard video")?.pause(); $("#quiz").hidden = true; };
     $("#mvclose").onclick = close; $("#mvdone").onclick = close;
   } catch (e) {
     $("#qcard").innerHTML = `<div class="loadcard"><div class="big-emoji">🙈</div><h2>Oops, the movie didn't work</h2><button class="big" id="mvretry">🔁 Try again</button> <button class="ghost" id="mvx">Close</button></div>`;
-    $("#mvretry").onclick = makeMovie; $("#mvx").onclick = () => { $("#quiz").hidden = true; };
+    $("#mvretry").onclick = () => makeMovie(animate); $("#mvx").onclick = () => { $("#quiz").hidden = true; };
   }
 }
-$("#moviebtn").onclick = makeMovie;
+$("#moviebtn").onclick = () => makeMovie(false);
 function goHome(){
   S.skipQ = true; S.quitQuiz = true; S.abortListen && S.abortListen();       // stop a running quiz
   stopListen(); speechSynthesis.cancel(); clearTimeout(S.autoDone);
