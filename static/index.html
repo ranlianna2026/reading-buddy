@@ -437,6 +437,11 @@ async function drawPicture(body, tries = 2){
   }
   return null;
 }
+async function earlyPicture(id){
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 90000);
+  try { const r = await fetch("/api/picture/" + id, { signal: ctl.signal }); return r.ok ? (await r.json()).image : null; }
+  catch (e) { return null; } finally { clearTimeout(timer); }
+}
 // Muse Image: every page gets a picture. Pages that would repeat a picture (or have none) get a new one drawn
 // from a reference picture; with no reference at all, page 1 is drawn from scratch and becomes the reference.
 async function planPictures(){
@@ -451,7 +456,8 @@ async function planPictures(){
     // told only by voice/text, or a book without illustrations: draw page 1 from scratch (two tries), then use it
     // as the reference for every other page so the characters stay the same
     S.pages.forEach(p => p.pending = true); refresh();
-    ref = await drawPicture({ page_text: S.pages[0].text, title: b.title, kind: "new", cast }, 3);
+    ref = (b.cover_id && await earlyPicture(b.cover_id))         // started on the server while the story was written
+       || await drawPicture({ page_text: S.pages[0].text, title: b.title, kind: "new", cast }, 3);
     if (!live()) return;
     if (ref) { S.pages[0].gen = ref; S.pages[0].pending = false; refresh(); }
   }

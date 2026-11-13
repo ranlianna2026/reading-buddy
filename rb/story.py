@@ -77,6 +77,11 @@ def classify_request(text, lang="en"):
     return "title", _LEAD.sub("", t).strip() or t
 
 
+def cast_of(plan):
+    """Characters and setting, for consistent pictures (the page uses the same string for every other page)."""
+    return f"{plan.get('characters', '')}. Setting: {plan.get('setting', '')}"
+
+
 FACTS = {"en": "facts for kids", "es": "datos para niños", "fr": "pour les enfants", "zh": "儿童 知识"}
 
 
@@ -87,6 +92,11 @@ def create_story(images, idea, level, practice_words=(), lang="en", kind="idea")
              "book": f"A child asked to read: \"{idea}\"."}.get(kind)
             or f"A child made these pictures and said this idea out loud: \"{idea or '(no idea given)'}\".")
     plan = chat_json(SYSTEM, f"{said} Plan a story from it. {KIND_NOTE[kind]} {ENGAGING}", PLAN, "plan", images=images)
+    cover_id = None
+    if not images:      # nothing to draw from: start page 1's picture now, while the story text is being written
+        from . import illustrate
+        cover_id = illustrate.start(f"The opening of the story: {plan.get('what_happens', idea)}",
+                                    title=idea[:80], cast=cast_of(plan))
     if kind == "topic" and not plan.get("search_query"):
         plan["real_world_topic"], plan["search_query"] = True, classify_request(idea, lang)[1]   # always real facts
     facts = []
@@ -120,5 +130,5 @@ def create_story(images, idea, level, practice_words=(), lang="en", kind="idea")
                     + (f"it is missing these practice words: {', '.join(check['practice_missing'])}." if check["practice_missing"] else ""))
     used = [facts[i] for i in st.get("facts_used", []) if 0 <= i < len(facts)]
     return {"title": st["title"], "text": text, "pages": st["pages"], "via": "story", "part": 0, "parts": 1,
-            "source": "story", "request": kind, "level": level, "check": check, "attempts": attempt + 1, "plan": plan, "lang": lang,
+            "source": "story", "request": kind, "cover_id": cover_id, "level": level, "check": check, "attempts": attempt + 1, "plan": plan, "lang": lang,
             "facts": [{"title": f.title, "url": f.url} for f in used]}

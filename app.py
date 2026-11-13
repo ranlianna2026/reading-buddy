@@ -172,6 +172,18 @@ def session(req: SessionReq):
     return {"profile": _profile_view(prof), "change": change}
 
 
+@app.get("/api/picture/{pid}")
+def early_picture(pid: str):
+    """A picture started early on the server (a story's first page); waits for it to finish."""
+    from rb import illustrate
+    try:
+        return {"image": illustrate.wait(pid)}
+    except KeyError:
+        raise HTTPException(404, "no such picture")
+    except Exception as e:
+        raise HTTPException(502, f"could not draw a picture: {str(e)[:200]}")
+
+
 class IllustrateReq(BaseModel):
     page_text: str
     ref_image: str = ""     # book illustration URL, child's drawing, or this story's first picture; "" = draw from scratch

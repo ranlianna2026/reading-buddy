@@ -8,7 +8,8 @@
   scratch instead, so every page still gets a picture.
 $0.01 per image. Cached on disk by (reference, text, kind).
 """
-import base64, hashlib, os
+import base64, hashlib, os, time, uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import httpx
@@ -26,6 +27,27 @@ STYLES = {
               "which is an earlier page of this same book",
     "new": "a warm, cozy watercolor-and-ink children's picture-book style with soft colors and friendly, expressive characters",
 }
+
+
+# pictures started early (e.g. a story's first picture, begun as soon as the story is planned, while the text is
+# still being written); the page picks the result up by id instead of waiting for a fresh drawing
+_POOL = ThreadPoolExecutor(max_workers=8)
+_EARLY = {}
+
+
+def start(page_text, ref_image=None, title="", kind="new", cast=""):
+    """Begin drawing in the background; returns an id for wait()."""
+    now = time.time()
+    for k in [k for k, (t, _) in _EARLY.items() if now - t > 600]:
+        _EARLY.pop(k, None)                         # forget pictures nobody collected
+    pid = uuid.uuid4().hex[:12]
+    _EARLY[pid] = (now, _POOL.submit(illustrate, page_text, ref_image, title, kind, cast))
+    return pid
+
+
+def wait(pid, timeout=90):
+    """The early picture's data URL. Raises KeyError for an unknown id, or the drawing's error."""
+    return _EARLY[pid][1].result(timeout=timeout)
 
 
 def illustrate(page_text, ref_image=None, title="", kind="book", cast=""):
