@@ -251,7 +251,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
               if (!busy) fetchStory(topic.trim());
             }}
           >
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <ul className="grid grid-cols-2 gap-3">
               {IDEAS.map(({ word, Art }) => (
                 <li key={word}>
                   <button

@@ -6,18 +6,6 @@ const CREAM = "oklch(0.915 0.052 82)";
 
 const skin = { stroke: INK, strokeWidth: 1.6, strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
 
-function Dino() {
-  return (
-    <g {...skin}>
-      <path d="M17 26c-5 0-9-3-9-7 0-3 2-5 5-6 0-6 2-10 6-10 3 0 5 2 5 5 0 3-2 4-3 5 2 2 3 5 3 8" fill={LEAF} />
-      <path d="M8 19c-3 0-5 2-6 5 2-1 4-1 6 0z" fill={LEAF} />
-      <path d="M19 6c1-1 2-1 3 0M16 10c-1 2-1 4 0 5" strokeWidth="1.2" />
-      <circle cx="21" cy="9" r="1.3" fill={INK} stroke="none" />
-      <path d="M12 25v3M20 25v3" />
-    </g>
-  );
-}
-
 function Kitten() {
   return (
     <g {...skin}>
@@ -58,17 +46,6 @@ function Robot() {
   );
 }
 
-function Cake() {
-  return (
-    <g {...skin}>
-      <path d="M15 3c1 2 2 2.5 2 4a2 2 0 0 1-4 0c0-1.5 1-2 2-4z" fill={SUN} />
-      <path d="M15 7v4" />
-      <path d="M5 16q5-3 10 0t10 0v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z" fill={BERRY} />
-      <path d="M5 16q0-4 10-4t10 4" fill={CREAM} />
-    </g>
-  );
-}
-
 function Dragon() {
   return (
     <g {...skin}>
@@ -84,12 +61,10 @@ function Dragon() {
 }
 
 export const IDEAS = [
-  { word: "dinosaurs", Art: Dino },
-  { word: "a lost kitten", Art: Kitten },
-  { word: "the deep sea", Art: Sea },
-  { word: "a silly robot", Art: Robot },
-  { word: "a birthday", Art: Cake },
   { word: "dragons", Art: Dragon },
+  { word: "a lost kitten", Art: Kitten },
+  { word: "a silly robot", Art: Robot },
+  { word: "the deep sea", Art: Sea },
 ] as const;
 
 export function Idea({ Art }: { Art: () => React.JSX.Element }) {
