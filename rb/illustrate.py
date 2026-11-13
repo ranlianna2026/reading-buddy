@@ -6,7 +6,7 @@
   page then becomes the reference for the rest of the book, so characters stay consistent.
 - If drawing from the reference fails (an unreachable book image, a rejected upload), the page is drawn from
   scratch instead, so every page still gets a picture.
-$0.01 per image. Cached on disk by (reference, text, kind).
+Pictures are resized to ~1024px wide JPEG before sending. $0.01 per image. Cached on disk by (reference, text, kind).
 """
 import base64, hashlib, os, time, uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -27,6 +27,25 @@ STYLES = {
               "which is an earlier page of this same book",
     "new": "a warm, cozy watercolor-and-ink children's picture-book style with soft colors and friendly, expressive characters",
 }
+
+
+SHRINK_WIDTH = int(os.environ.get("RB_IMAGE_WIDTH", "1024"))
+
+
+def shrink(data, width=SHRINK_WIDTH, quality=82):
+    """Smaller JPEG for the page: much less to send to the browser, and to upload again when this picture is the
+    reference for the next pages. (The API's `size` only sets the aspect ratio, so it can't be asked for smaller.)"""
+    try:
+        import io
+        from PIL import Image
+        im = Image.open(io.BytesIO(data)).convert("RGB")
+        if im.width > width:
+            im = im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
+        out = io.BytesIO()
+        im.save(out, "JPEG", quality=quality, optimize=True, progressive=True)
+        return out.getvalue() if out.tell() < len(data) else data
+    except Exception:
+        return data                                 # never lose a picture over resizing
 
 
 # pictures started early (e.g. a story's first picture, begun as soon as the story is planned, while the text is
@@ -80,7 +99,7 @@ def _draw(page_text, ref_image=None, title="", kind="book", cast=""):
                    json=body, timeout=httpx.Timeout(55, connect=10))
     if r.status_code >= 400:
         raise meta_api.APIError(f"{r.status_code}: {r.text[:300]}")
-    data = base64.b64decode(r.json()["data"][0]["b64_json"])
+    data = shrink(base64.b64decode(r.json()["data"][0]["b64_json"]))
     CACHE.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
     return "data:image/jpeg;base64," + base64.b64encode(data).decode()

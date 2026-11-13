@@ -736,7 +736,23 @@ async function reportCard(right, n, learn, sess){
 
 // ---------- make my own story ----------
 const fileToUrl = f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); });
-$("#pics").onchange = async e => { S.storyFiles = [...e.target.files].slice(0, 4); S.storyImgs = await Promise.all(S.storyFiles.map(fileToUrl));
+// a phone photo of a drawing can be several MB, and it is uploaded again for every page drawn in its style:
+// shrink it to ~1024px JPEG first (falls back to the original if the browser can't decode it)
+async function shrinkImage(file, max = 1024){
+  const url = await fileToUrl(file);
+  try {
+    const img = new Image(); img.src = url; await img.decode();
+    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+    const small = c.toDataURL("image/jpeg", 0.85);
+    if (small.length >= url.length) return { url, file };
+    const blob = await (await fetch(small)).blob();
+    return { url: small, file: new File([blob], (file.name || "drawing").replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }) };
+  } catch (e) { return { url, file }; }
+}
+$("#pics").onchange = async e => { const shrunk = await Promise.all([...e.target.files].slice(0, 4).map(f => shrinkImage(f)));
+  S.storyFiles = shrunk.map(x => x.file); S.storyImgs = shrunk.map(x => x.url);
   $("#thumbs").innerHTML = S.storyImgs.map(u => `<img src="${u}">`).join(""); say("Ooh, I love your pictures!"); };
 $("#ideamic").onclick = async () => { await say("Tell me your story idea!"); const t = await listenOnce(15000, S.lang); if (t) { $("#idea").value = t; say("Great idea!"); } };
 async function makeStory(sequel = false){
