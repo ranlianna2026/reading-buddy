@@ -38,8 +38,17 @@ export async function action({ request, params }: Route.ActionArgs) {
   if (!EMAIL.test(email)) return bad("That email does not look right.");
   if (password.length < 8) return bad("Use at least 8 characters for the password.");
 
+  // One door. A known email with the right password is a returning grown-up, not an error.
   if (params.action === "signup") {
-    if (await userByEmail(email)) return bad("That email already has an account. Sign in instead.");
+    const had = await userByEmail(email);
+    if (had) {
+      if (!(await checkPassword(password, had.password_hash))) {
+        return bad("That email already has an account, and that password does not match it.", 401);
+      }
+      const back = await startSession(had.id);
+      const kids = await kidsOf(had.id);
+      return Response.json({ ok: true, fresh: kids.length === 0 }, { headers: { "Set-Cookie": sessionCookie(request, back) } });
+    }
     const userId = await createUser(email, password);
     const token = await startSession(userId);
     return Response.json({ ok: true, fresh: true }, { headers: { "Set-Cookie": sessionCookie(request, token) } });

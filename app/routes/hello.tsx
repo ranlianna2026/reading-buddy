@@ -21,7 +21,6 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
   const [params] = useSearchParams();
   const go = useNavigate();
   const [step, setStep] = useState<"in" | "who">(loaderData.signedIn || params.has("who") ? "who" : "in");
-  const [mode, setMode] = useState<"in" | "up">("in");
   const [byEmail, setByEmail] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,8 +42,8 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
 
   const withPassword = () =>
     run("password", async () => {
-      const result = await send<{ fresh: boolean }>(`/api/auth/${mode === "up" ? "signup" : "signin"}`, fields({ email, password }));
-      result.fresh ? setStep("who") : go("/read");
+      const result = await send<{ fresh: boolean }>("/api/auth/signup", fields({ email, password }));
+      result.fresh ? setStep("who") : go("/");
     });
 
   const withPasskey = () =>
@@ -52,7 +51,7 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
       const options = await post<Parameters<typeof startAuthentication>[0]["optionsJSON"]>("/api/passkey/options", { email: email || undefined });
       const response = await startAuthentication({ optionsJSON: options });
       const result = await post<{ fresh: boolean }>("/api/passkey/check", { response });
-      result.fresh ? setStep("who") : go("/read");
+      result.fresh ? setStep("who") : go("/");
     });
 
   const addPasskey = () =>
@@ -65,7 +64,7 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
   const addKid = () =>
     run("kid", async () => {
       await send("/api/auth/kid", fields({ name, grade }));
-      go("/read");
+      go("/");
     });
 
   if (step === "who") {
@@ -129,7 +128,7 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
 
   return (
     <Screen id="page-hello">
-      <Focus intro={mode + String(byEmail)} className="max-w-sm">
+      <Focus intro={String(byEmail)} className="max-w-sm">
         <Buddy mood="hi" size={180} className="breathe" />
         <h1 className="text-4xl">Learning Buddy</h1>
         <p className="text-muted">Pick a story, read it out loud, then talk about it.</p>
@@ -165,7 +164,7 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
             />
             <input
               type="password"
-              autoComplete={mode === "up" ? "new-password" : "current-password"}
+              autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="at least 8 characters"
@@ -173,10 +172,7 @@ export default function Hello({ loaderData }: Route.ComponentProps) {
               className="h-14 rounded-full border-2 border-line bg-surface/92 px-5 text-center text-lg outline-none backdrop-blur-sm focus:border-leaf"
             />
             <button className="btn btn-leaf w-full rounded-full" disabled={busy === "password"}>
-              {busy === "password" ? "One moment…" : mode === "up" ? "Make an account" : "Sign in"}
-            </button>
-            <button type="button" className="text-sm font-medium text-leaf-ink underline" onClick={() => setMode(mode === "up" ? "in" : "up")}>
-              {mode === "up" ? "I already have an account" : "New here? Make an account"}
+              {busy === "password" ? "One moment…" : "Make an account"}
             </button>
             <button type="button" className="mono text-muted underline" onClick={() => setByEmail(false)}>
               back
