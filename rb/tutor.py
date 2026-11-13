@@ -1,6 +1,6 @@
 """Comprehension tutor: Muse Spark writes questions and grades spoken answers; code checks every quote
 really appears in the passage. Keenable adds kid-safe "learn more" background with sources."""
-import re
+import random, re
 
 from .books import ksearch
 from .meta_api import chat_json, data_url
@@ -20,13 +20,16 @@ Q_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["quest
     "learn_topic": {"type": "string", "description": "one concrete real-world thing from the story a child would enjoy learning a fact about, e.g. 'foxes' or 'velveteen fabric'"},
     "questions": {"type": "array", "minItems": 3, "maxItems": 3, "items": {
         "type": "object", "additionalProperties": False,
-        "required": ["kind", "question", "expected_answer", "quote", "word"],
+        "required": ["kind", "question", "expected_answer", "quote", "word", "choices", "answer_index"],
         "properties": {
             "kind": {"type": "string", "enum": ["recall", "inference", "vocabulary"]},
             "question": {"type": "string", "description": "the question only, no praise or preamble"},
             "expected_answer": {"type": "string", "description": "the main answer plus other answers the passage would also support"},
             "quote": {"type": "string", "description": "exact words copied from the passage that support the answer"},
-            "word": {"type": "string", "description": "for vocabulary questions, the word asked about; else empty"}}}}}}
+            "word": {"type": "string", "description": "for vocabulary questions, the word asked about; else empty"},
+            "choices": {"type": "array", "items": {"type": "string"},
+                        "description": "recall and vocabulary: exactly 3 short options (one right, two plausible but clearly wrong); inference: empty"},
+            "answer_index": {"type": "integer", "description": "index of the right option in choices; -1 for inference"}}}}}}
 
 
 def make_questions(passage, practice_words=(), age="6-10", focus=None):
@@ -36,12 +39,26 @@ def make_questions(passage, practice_words=(), age="6-10", focus=None):
                  "building on an easy detail first. ")
     out = chat_json(SYSTEM.format(age=age),
                     f"{hint}Write exactly 3 questions about this passage: one 'recall' (what happened / who), "
+                    "as single choice with 3 short options; "
                     "one 'inference' (why / how did a character feel), one 'vocabulary' (meaning of a word "
-                    "from the passage, preferably one the child stumbled on). Each needs an expected answer "
+                    "from the passage, preferably one the child stumbled on) as single choice with 3 short options; "
+                    "the inference question is open-ended (no options). Each needs an expected answer "
                     "and a short exact quote from the passage that supports it.\n\nPassage:\n" + passage,
                     Q_SCHEMA, "questions")
-    qs = [q for q in out["questions"] if quote_ok(q["quote"], passage)]
-    return qs or out["questions"][:3], out.get("learn_topic", "")
+    qs = [q for q in out["questions"] if quote_ok(q["quote"], passage)] or out["questions"][:3]
+    return [_shape(q) for q in qs[:3]], out.get("learn_topic", "")
+
+
+def _shape(q):
+    """Code checks single-choice questions (3 distinct options, a valid right answer) and shuffles them;
+    anything malformed becomes an open-ended question graded by Muse instead."""
+    ch = [c.strip() for c in q.get("choices") or [] if c.strip()]
+    ai = q.get("answer_index", -1)
+    if q["kind"] == "inference" or len(ch) != 3 or len({c.lower() for c in ch}) != 3 or not 0 <= ai < 3:
+        return {**q, "format": "open", "choices": [], "answer_index": -1}
+    right = ch[ai]
+    random.shuffle(ch)
+    return {**q, "format": "choice", "choices": ch, "answer_index": ch.index(right)}
 
 
 G_SCHEMA = {"type": "object", "additionalProperties": False,

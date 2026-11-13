@@ -159,6 +159,53 @@
   .passage .misread { background:#ffe7c7; border-bottom:3px solid var(--warn); }
   .passage .reached { background:#dcf6ea; }
   .passage span.speaking { background:#ffe58a; box-shadow:0 0 0 3px #ffe58a; }
+  .overlay { position:fixed; inset:0; background:rgba(42,37,80,.45); backdrop-filter: blur(4px); display:grid; place-items:center; z-index:50; padding:20px; animation: fade .25s; }
+  @keyframes fade { from { opacity:0; } }
+  .qcard { width:min(760px, 96vw); max-height:94vh; overflow:auto; background:#fffdf8; border-radius:32px; padding:26px 32px 24px;
+           box-shadow:0 8px 0 #e8dcc0, 0 30px 80px rgba(30,20,60,.35); border:2px solid #f1e4c8; animation: pop .3s cubic-bezier(.2,1.4,.4,1); position:relative; }
+  @keyframes pop { from { transform: scale(.9) translateY(20px); opacity:0; } }
+  .qtop { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  .qdots span { display:inline-block; width:14px; height:14px; border-radius:50%; background:#ece6d6; margin-right:6px; }
+  .qdots span.on { background:var(--accent); } .qdots span.correct { background:var(--mint); } .qdots span.miss { background:var(--sun); }
+  .qnum { color:var(--muted); font-weight:700; }
+  .qkind { margin-left:auto; background:var(--accent-soft); color:var(--accent); font-weight:800; padding:6px 14px; border-radius:20px; font-size:14px; }
+  .qask { display:flex; gap:14px; align-items:flex-start; }
+  .qask .face { width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg,#fff3d6,#ffe0a3); display:grid; place-items:center; font-size:40px; box-shadow:0 4px 0 #f3c97a; flex:none; }
+  .qtext { font-family:"Fredoka", sans-serif; font-size:clamp(24px, 3.4vh, 32px); line-height:1.3; font-weight:600; padding-top:6px; }
+  .opts { display:grid; gap:10px; margin:20px 0 4px; }
+  .opt { display:flex; align-items:center; gap:14px; text-align:left; background:#fff; color:var(--ink); border:3px solid #e9e4ff; box-shadow:0 4px 0 #e9e4ff;
+         font-family:"Andika", "Nunito", sans-serif; font-size:22px; font-weight:700; padding:12px 16px; border-radius:18px; }
+  .opt span { width:38px; height:38px; border-radius:50%; background:var(--accent-soft); color:var(--accent); display:grid; place-items:center; font-family:"Fredoka"; flex:none; }
+  .opt.right { border-color:var(--mint); background:#e2f7ee; box-shadow:0 4px 0 #9fe2c8; } .opt.right span { background:var(--mint); color:#fff; }
+  .opt.wrong { opacity:.45; text-decoration:line-through; animation: shake .35s; } @keyframes shake { 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+  .mic.small { width:64px; height:64px; font-size:28px; margin-top:10px; }
+  .mic { width:96px; height:96px; border-radius:50%; margin:22px auto 8px; display:grid; place-items:center; font-size:42px; background:#fff;
+         border:3px solid #ffd2da; box-shadow:0 5px 0 #ffd2da; cursor:pointer; transition: all .2s; }
+  body.mic-on .mic { background:#ff5d73; border-color:#ff5d73; box-shadow:0 0 0 0 rgba(255,93,115,.55); animation: ring 1.2s infinite; }
+  @keyframes ring { to { box-shadow:0 0 0 26px rgba(255,93,115,0); } }
+  .miclabel { text-align:center; color:var(--muted); font-weight:700; font-size:14px; min-height:20px; }
+  .qheard { text-align:center; font-size:22px; font-style:italic; color:var(--ink); min-height:32px; margin:6px 0 4px; }
+  .qheard.has::before { content:"“"; } .qheard.has::after { content:"”"; }
+  .qsay { display:flex; gap:12px; align-items:flex-start; background:var(--accent-soft); border-radius:20px; padding:14px 18px; font-size:19px; font-weight:600; min-height:56px; margin-top:10px; }
+  .qsay .em { font-size:30px; line-height:1; }
+  .qsay.correct { background:#e2f7ee; } .qsay.miss { background:#fff1dd; }
+  .proof { display:flex; gap:14px; align-items:center; margin-top:14px; background:#fff; border:2px dashed #e9dcc0; border-radius:18px; padding:10px 14px; }
+  .proof img { width:110px; height:76px; object-fit:cover; border-radius:12px; flex:none; }
+  .proof .t { font-family:"Andika", sans-serif; font-size:18px; line-height:1.5; } .proof mark { background:var(--quote); border-radius:4px; padding:0 2px; }
+  .proof small { display:block; color:var(--muted); font-family:"Nunito"; font-weight:800; font-size:12px; letter-spacing:.06em; text-transform:uppercase; }
+  .qactions { display:flex; justify-content:space-between; margin-top:16px; }
+  .burst { position:absolute; inset:0; pointer-events:none; overflow:hidden; border-radius:32px; }
+  .burst i { position:absolute; top:40%; left:50%; font-size:28px; font-style:normal; animation: fly 1s ease-out forwards; }
+  @keyframes fly { to { transform: translate(var(--x), var(--y)) rotate(var(--r)); opacity:0; } }
+  /* report card */
+  .rhead { text-align:center; } .rhead h2 { font-family:"Fredoka"; font-size:32px; color:var(--ink); letter-spacing:0; text-transform:none; margin:4px 0; }
+  .stars { font-size:44px; letter-spacing:6px; text-align:center; }
+  .rstats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:16px 0; }
+  .rstats div { background:#fff; border:2px solid #f3e7cf; box-shadow:0 3px 0 #f3e7cf; border-radius:18px; text-align:center; padding:12px; }
+  .rstats b { display:block; font-family:"Fredoka"; font-size:30px; color:var(--accent); }
+  .rstats small { color:var(--muted); font-weight:700; }
+  .rrow { margin-top:12px; font-size:16px; } .rrow .chips span { font-size:15px; }
+  .rbtns { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:20px; }
   @media (max-width: 1100px) { main { grid-template-columns:1fr; } .choices { grid-template-columns:1fr; } }
 </style>
 </head>
@@ -233,10 +280,13 @@
     </div>
     <h2>Words to practice</h2>
     <div class="chips" id="practice"><span style="background:#f3f3f3;color:#999;cursor:default">none yet</span></div>
-    <div id="qsec" hidden><h2>Questions</h2><div id="qs"></div></div>
+    <div id="qsec" hidden><div id="qs"></div></div>
     <div id="lsec" hidden><h2>Learn more</h2><div id="learn"></div></div>
   </aside>
 </main>
+<div class="overlay" id="quiz" hidden>
+  <div class="qcard" id="qcard"></div>
+</div>
 <footer>Built with Meta Muse Spark (reading, questions, stories) · Muse Image (pictures) · Keenable (books &amp; facts) · speech runs in your browser · books from Project Gutenberg (public domain)</footer>
 <script>
 const $ = s => document.querySelector(s);
@@ -271,7 +321,7 @@ function pickVoice(){ const vs = speechSynthesis.getVoices();
   VOICE = vs.find(v => /Samantha|Google US English|Ava|Allison/i.test(v.name) && v.lang.startsWith("en")) || vs.find(v=>v.lang==="en-US") || null; }
 speechSynthesis.onvoiceschanged = pickVoice; pickVoice();
 function say(text, show=true){
-  if (show) $("#say").innerHTML = text;
+  if (show) $(S.sayTarget || "#say").innerHTML = text;
   return new Promise(res => {
     const plain = text.replace(/<[^>]+>/g, "");
     const u = new SpeechSynthesisUtterance(plain); if (VOICE) u.voice = VOICE; u.rate = 0.95; u.pitch = 1.1;
@@ -287,11 +337,14 @@ function listenOnce(timeoutMs=9000){
   return new Promise(res => {
     if (!SR) return res(prompt("Type your answer:") || "");
     const r = new SR(); r.lang = "en-US"; r.interimResults = true; r.continuous = false;
-    let final = "", done = false; const finish = () => { if (!done) { done = true; try{r.stop()}catch{}; res(final.trim()); } };
+    let final = "", done = false; const finish = () => { if (!done) { done = true; S.abortListen = null; try{r.stop()}catch{}; res(final.trim()); } };
+    S.abortListen = finish; const out = $(S.heardTarget || "#heard");
     r.onresult = e => { let interim = ""; for (const x of e.results) (x.isFinal ? final = x[0].transcript : interim = x[0].transcript);
-      $("#heard").textContent = "🎤 " + (final || interim); };
+      out.textContent = (S.heardTarget ? "" : "🎤 ") + (final || interim); out.classList.add("has"); };
     r.onend = finish; r.onerror = finish; setTimeout(finish, timeoutMs); r.start();
-    $("#heard").textContent = "🎤 listening…";
+    out.textContent = S.heardTarget ? "" : "🎤 listening…"; out.classList.remove("has"); S.listening = true;
+    const onEnd = r.onend; r.onend = () => { S.listening = false; document.body.classList.remove("mic-on"); finish(); };
+    document.body.classList.add("mic-on");
   });
 }
 let reader = null;
@@ -478,56 +531,133 @@ async function finishReading(){
   await say("Now let's talk about the story!");
   askQuestions();
 }
+const KIND = { recall: "🔎 Remember", inference: "💭 Think", vocabulary: "📚 Word" };
+function burst(){ const b = document.createElement("div"); b.className = "burst";
+  b.innerHTML = Array.from({length: 14}, () => `<i style="--x:${(Math.random()*2-1)*320}px;--y:${(Math.random()*2-1)*220}px;--r:${Math.random()*360}deg">${["⭐","✨","🌟","🎉"][Math.floor(Math.random()*4)]}</i>`).join("");
+  $("#qcard").appendChild(b); setTimeout(() => b.remove(), 1100); }
+function proofHTML(quote){                          // the supporting sentence, shown with its page picture
+  if (!quote) return "";
+  const q = quote.split(/\s+/).map(norm).filter(Boolean), spans = [...document.querySelectorAll("#passage span")], ref = spans.map(x => norm(x.textContent));
+  for (let i = 0; i < ref.length; i++) { let j = 0, k = i;
+    while (k < ref.length && j < q.length) { if (!ref[k]) { k++; continue; } if (ref[k] !== q[j]) break; j++; k++; }
+    if (j === q.length) {
+      const pg = S.pages[pageOf(i)], a = Math.max(pg.start, i - 8), z = Math.min(pg.end, k + 8);
+      const words = spans.slice(a, z).map((x, n) => (a + n >= i && a + n < k) ? `<mark>${x.textContent}</mark>` : x.textContent).join(" ");
+      const img = pg.gen || pg.img;
+      return `<div class="proof">${img ? `<img src="${img}">` : ""}<div class="t"><small>📖 From the story · page ${pageOf(i) + 1}</small>${a > pg.start ? "…" : ""}${words}${z < pg.end ? "…" : ""}</div></div>`;
+    } }
+  return `<div class="proof"><div class="t"><small>📖 From the story</small><mark>${quote}</mark></div></div>`;
+}
+function quizCard(i, n, q){
+  $("#qcard").innerHTML = `
+    <div class="qtop"><span class="qdots">${S.answers.map(a => `<span class="${a.verdict === "correct" ? "correct" : "miss"}"></span>`).join("")}${Array.from({length: n - S.answers.length}, (_, k) => `<span class="${k === 0 ? "on" : ""}"></span>`).join("")}</span>
+      <span class="qnum">Question ${i + 1} of ${n}</span><span class="qkind">${KIND[q.kind] || q.kind}</span></div>
+    <div class="qask"><div class="face">🦉</div><div class="qtext">${q.question}</div></div>
+    ${q.format === "choice" ? `<div class="opts">${q.choices.map((c, k) => `<button class="opt" data-k="${k}"><span>${"ABC"[k]}</span>${c}</button>`).join("")}</div>` : ""}
+    <div class="mic ${q.format === "choice" ? "small" : ""}" id="qmic" title="Tap to answer">🎤</div>
+    <div class="miclabel" id="qmiclabel">Listen to the question…</div>
+    <div class="qheard" id="qheard"></div>
+    <div class="qsay" id="qsaybox" hidden><span class="em" id="qem">🦉</span><span id="qsay"></span></div>
+    <div id="qproof"></div>
+    <div class="qactions"><button class="ghost small" id="qagain">🔁 Hear it again</button><button class="ghost small" id="qskip">Skip ›</button></div>`;
+  $("#qagain").onclick = () => { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(q.question); if (VOICE) u.voice = VOICE; u.rate = .95; speechSynthesis.speak(u); };
+  $("#qskip").onclick = () => { S.skipQ = true; speechSynthesis.cancel(); S.abortListen && S.abortListen(); };
+}
+function pickByVoice(said, q){
+  const t = " " + said.toLowerCase().replace(/[^a-z0-9 ]/g, " ") + " ";
+  const ord = [/\b(a|first|one|1)\b/, /\b(b|second|two|2)\b/, /\b(c|third|three|3)\b/];
+  let best = -1, score = 0;
+  q.choices.forEach((c, k) => { const ws = c.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 2);
+    const hit = ws.filter(w => t.includes(" " + w)).length / Math.max(1, ws.length); if (hit > score) { score = hit; best = k; } });
+  if (score >= 0.5) return best;
+  if (/\bsecond\b/.test(t)) return 1; if (/\bthird\b|\blast\b/.test(t)) return 2; if (/\bfirst\b/.test(t)) return 0;
+  const tok = t.trim().split(/\s+/); if (tok.length <= 2) { const k = ord.findIndex(r => r.test(tok[tok.length - 1])); if (k >= 0) return k; }
+  return -1;
+}
+function choose(q){                                  // resolves with the option index (tap or voice), or -1
+  return new Promise(res => {
+    let done = false; const fin = k => { if (done) return; done = true; S.abortListen && S.abortListen(); res(k); };
+    document.querySelectorAll(".opt:not(.wrong)").forEach(b => b.onclick = () => fin(+b.dataset.k));
+    $("#qmiclabel").textContent = "Tap an answer, or say it!";
+    listenOnce(12000).then(said => { if (done) return; const k = said ? pickByVoice(said, q) : -1; if (k >= 0 || !said) fin(k); else { $("#qmiclabel").textContent = "Tap the answer you mean!"; } });
+  });
+}
+function buddySays(text, mood){ const box = $("#qsaybox"); if (!box) return; box.hidden = false; box.className = "qsay " + (mood || "");
+  $("#qem").textContent = mood === "correct" ? "⭐" : mood === "miss" ? "💡" : mood === "reread" ? "📖" : "🦉"; }
 async function askQuestions(){
   $("#controls").innerHTML = `<span class="spinner"></span> getting questions ready…`;
   const { questions, learn_topic } = await S.qsPromise; S.questions = questions; S.learnTopic = learn_topic;
   const learnP = learn_topic ? post("/api/learn", { topic: learn_topic, title: S.book.title }).catch(() => null) : Promise.resolve(null);
-  $("#qsec").hidden = false; $("#qs").innerHTML = questions.map((q, i) => `<div class="q" id="q${i}"><div class="k">${q.kind}</div>${q.question}<div class="a"></div></div>`).join("");
-  $("#controls").innerHTML = `<button class="ghost" id="skipq">Skip question</button>`;
+  $("#controls").innerHTML = ""; $("#quiz").hidden = false;
   let right = 0; S.answers = [];
   for (let i = 0; i < questions.length; i++) {
-    const q = questions[i], el = $(`#q${i}`); el.scrollIntoView({block:"nearest"});
+    const q = questions[i]; quizCard(i, questions.length, q); S.skipQ = false;
+    S.sayTarget = "#qsay"; S.heardTarget = "#qheard";
     let verdict = "not_yet", action = "hint_retry";
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      await say(attempt === 1 ? q.question : "Let's try again. " + q.question);
+    for (let attempt = 1; attempt <= 2 && !S.skipQ; attempt++) {
+      await say(attempt === 1 ? q.question : "Let's try again. " + q.question, false);
+      if (S.skipQ) break;
+      if (q.format === "choice") {                    // single choice: graded instantly by code
+        const k = await choose(q); $("#qmiclabel").textContent = "";
+        if (S.skipQ) break;
+        if (k < 0) { buddySays(); await say("I didn't catch that. Tap your answer!"); attempt--; continue; }
+        const btn = document.querySelector(`.opt[data-k="${k}"]`);
+        if (k === q.answer_index) { verdict = "correct"; btn.classList.add("right"); buddySays("", "correct"); burst();
+          $("#qproof").innerHTML = proofHTML(q.quote); await say(["Yes! That's right!", "You got it!", "Great job!"][i % 3]); await new Promise(r => setTimeout(r, 900)); break; }
+        btn.classList.add("wrong");
+        if (attempt === 1) { buddySays("", "reread"); $("#qproof").innerHTML = proofHTML(q.quote); await say("Not quite. Let's look at the story again, then pick another one."); continue; }
+        document.querySelector(`.opt[data-k="${q.answer_index}"]`).classList.add("right"); buddySays("", "miss");
+        await say(`The answer is: ${q.choices[q.answer_index]}. You'll get it next time!`); await new Promise(r => setTimeout(r, 900)); break;
+      }
+      $("#qmiclabel").textContent = "I'm listening… say your answer!";
       const answer = await listenOnce();
-      el.querySelector(".a").textContent = answer ? `“${answer}”` : "(no answer)";
-      if (!answer) { await say("I didn't catch that."); continue; }
-      say(["Hmm, let me think…", "Ooh, interesting…", "Let me check the story…"][attempt % 3]);
+      $("#qmiclabel").textContent = "";
+      if (S.skipQ) break;
+      if (!answer) { buddySays(); await say("I didn't catch that. Tap the microphone and try again!"); continue; }
+      buddySays(); say(["Hmm, let me think…", "Ooh, interesting…", "Let me check the story…"][attempt % 3]);
       const g = await post("/api/grade", { passage: S.book.text, question: q, answer, attempt });
-      verdict = g.verdict; action = g.next_action; el.className = "q " + verdict;
+      verdict = g.verdict; action = g.next_action;
       // the tutor's next move (chosen by Muse, bounded by code): praise / hint / re-read together / explain
-      if (action === "reread_retry") { highlightQuote(g.quote); await say(g.feedback + " Let's look at this part again together."); if (g.quote) await say(g.quote); }
-      else if (action === "hint_retry") { highlightQuote(""); await say(g.feedback + (g.hint ? " " + g.hint : "")); }
-      else { highlightQuote(g.quote); await say(g.feedback); }
-      if (action === "praise_move_on" || action === "explain_move_on") break;
+      if (action === "praise_move_on") { buddySays("", "correct"); burst(); $("#qproof").innerHTML = proofHTML(g.quote); await say(g.feedback); }
+      else if (action === "reread_retry") { buddySays("", "reread"); $("#qproof").innerHTML = proofHTML(g.quote); await say(g.feedback + " Let's read this part again together."); if (g.quote) await say(g.quote); }
+      else if (action === "hint_retry") { buddySays("", "miss"); $("#qproof").innerHTML = ""; await say(g.feedback + (g.hint ? " " + g.hint : "")); }
+      else { buddySays("", "miss"); $("#qproof").innerHTML = proofHTML(g.quote); await say(g.feedback); }
+      if (action === "praise_move_on" || action === "explain_move_on") { await new Promise(r => setTimeout(r, 900)); break; }
+      $("#qheard").textContent = ""; $("#qheard").classList.remove("has");
     }
     if (verdict === "correct") right++;
     S.answers.push({ kind: q.kind, verdict, word: q.word || "" });
-    $("#heard").textContent = "";
   }
-  highlightQuote("");
+  S.sayTarget = null; S.heardTarget = null;
   $("#comp").textContent = `${right}/${questions.length}`;
-  const learn = await learnP;
-  if (learn) $("#lsec").hidden = false;
-  if (learn) $("#learn").innerHTML = `<div class="learn">🌍 <b>${learn.topic}</b>: ${learn.fact}<br><a href="${learn.source_url}" target="_blank">source: ${learn.source_title}</a></div>`;
-  const msg = right === questions.length ? `Amazing! You understood all ${right} questions! ` : right > 0 ? `You got <b>${right} out of ${questions.length}</b>. Nice thinking! ` : `Those were tricky questions. Reading it again will help! `;
-  await say(msg + (learn ? `Here's a fun fact about ${learn.topic}: ${learn.fact}` : "Great job today!"));
-  const sess = await post("/api/session", { learner: LEARNER(), title: S.book.title, source: S.book.via, score: S.score, answers: S.answers });
-  renderProfile(sess.profile); const ch = sess.change;
-  const up = ch.level_to > ch.level_from, down = ch.level_to < ch.level_from;
-  $("#lsec").insertAdjacentHTML("afterend", `<div class="change">${up ? "🎉 Level up! " : down ? "🌱 " : "👍 "}Level ${ch.level_from} → ${ch.level_to}: ${ch.why}.`
-    + (ch.mastered.length ? `<br>⭐ Mastered: <b>${ch.mastered.join(", ")}</b>` : "")
-    + (sess.profile.practice.length ? `<br>📝 Your next story will practice: <b>${sess.profile.practice.slice(0, 3).join(", ")}</b>` : "") + `</div>`);
-  if (up) await say(`Level up! You're now on level ${ch.level_to}!`);
-  if (sess.profile.practice.length) await say(`Next time, your story will help you practice ${sess.profile.practice.slice(0, 3).join(", ")}.`);
-  const next = S.book.parts > S.book.part + 1;
-  $("#controls").innerHTML = `<button class="big" id="nextstory">Make my next story ✨</button> `
-    + (next ? `<button class="ghost" id="nextbtn">Read the next part ➡️</button> ` : "") + `<button class="ghost" id="againbtn">Read it again 🔁</button>`;
-  $("#nextstory").onclick = () => makeStory(true);
-  if (next) $("#nextbtn").onclick = async () => { $("#controls").innerHTML = `<span class="spinner"></span>`;
+  $("#qcard").innerHTML = `<div class="rhead"><div class="stars">${"⭐".repeat(Math.max(1, right))}${"☆".repeat(questions.length - right)}</div><h2>Putting your report card together…</h2><span class="spinner"></span></div>`;
+  const [learn, sess] = await Promise.all([learnP,
+    post("/api/session", { learner: LEARNER(), title: S.book.title, source: S.book.via, score: S.score, answers: S.answers })]);
+  renderProfile(sess.profile); reportCard(right, questions.length, learn, sess);
+}
+async function reportCard(right, n, learn, sess){
+  const s = S.score, ch = sess.change, up = ch.level_to > ch.level_from, down = ch.level_to < ch.level_from;
+  const head = right === n ? `Amazing reading, ${LEARNER()}!` : right > 0 ? `Great job, ${LEARNER()}!` : `Good try, ${LEARNER()}!`;
+  const next = S.book.parts > S.book.part + 1, practice = sess.profile.practice.slice(0, 3);
+  $("#qcard").innerHTML = `
+    <div class="rhead"><div class="stars">${"⭐".repeat(right)}${"☆".repeat(n - right)}</div><h2>${head}</h2>
+      <div style="color:var(--muted);font-weight:700">${S.book.title}</div></div>
+    <div class="rstats"><div><b>${s.wcpm}</b><small>words / minute</small></div><div><b>${Math.round(s.accuracy * 100)}%</b><small>read correctly</small></div><div><b>${right}/${n}</b><small>questions understood</small></div></div>
+    <div class="change">${up ? "🎉 <b>Level up!</b> " : down ? "🌱 " : "👍 "}Level ${ch.level_from} → ${ch.level_to}: ${ch.why}.${ch.mastered.length ? `<br>⭐ Mastered: <b>${ch.mastered.join(", ")}</b>` : ""}</div>
+    ${practice.length ? `<div class="rrow">📝 Words to practice (tap to hear): <span class="chips">${practice.map(w => `<span>${w} 🔊</span>`).join("")}</span><br><small style="color:var(--muted)">Your next story will use them!</small></div>` : ""}
+    ${learn ? `<div class="rrow"><div class="learn">🌍 <b>Fun fact about ${learn.topic}:</b> ${learn.fact}<br><a href="${learn.source_url}" target="_blank">source: ${learn.source_title}</a></div></div>` : ""}
+    <div class="rbtns"><button class="big" id="nextstory">✨ Make my next story</button>
+      ${next ? `<button class="ghost" id="nextbtn">Read the next part ➡️</button>` : ""}<button class="ghost" id="againbtn">🔁 Read it again</button>
+      <button class="ghost" id="closerep">Close</button></div>`;
+  if (right === n) burst();
+  document.querySelectorAll(".rrow .chips span").forEach(el => el.onclick = () => say(el.textContent.replace(" 🔊",""), false));
+  const close = () => { $("#quiz").hidden = true; speechSynthesis.cancel(); };
+  $("#nextstory").onclick = () => { close(); makeStory(true); };
+  if (next) $("#nextbtn").onclick = async () => { close(); $("#controls").innerHTML = `<span class="spinner"></span>`;
     S.book = await post("/api/book", { title: S.book.title, part: S.book.part + 1 }); showBook(); };
-  $("#againbtn").onclick = showBook;
+  $("#againbtn").onclick = () => { close(); showBook(); };
+  $("#closerep").onclick = () => { close(); $("#controls").innerHTML = `<button class="big" id="nextstory2">✨ Next story</button>`; $("#nextstory2").onclick = () => makeStory(true); };
+  await say(`${head} ${up ? `You moved up to level ${ch.level_to}! ` : ""}` + (learn ? `Here's a fun fact about ${learn.topic}: ${learn.fact}` : ""), false);
 }
 
 // ---------- make my own story ----------
