@@ -80,6 +80,16 @@ export default function Read({ loaderData }: Route.ComponentProps) {
   const asked = useRef(false);
 
   useEffect(() => speakIn(tongueOf(kid.language).tag), [kid.language]);
+
+  // Arriving from the shelf with ?topic= means a book was chosen: write it and start reading.
+  const asked0 = useRef(false);
+  useEffect(() => {
+    const want = params.get("topic");
+    if (!want || asked0.current) return;
+    asked0.current = true;
+    void fetchStory(want.trim());
+  }, []);
+
   useEffect(() => () => mic.current?.stop(), []);
 
   const fetchStory = async (want: string) => {
@@ -232,6 +242,21 @@ export default function Read({ loaderData }: Route.ComponentProps) {
     }
     setBusy("");
   };
+
+  // Chosen from the shelf: the book is being written, so never show the picker behind it.
+  if (stage === "pick" && params.get("topic") && !story && !error) {
+    return (
+      <Screen id="page-opening">
+        <TopNav left={<span className="text-lg font-medium">Hi {kid.name}</span>} right={<Crumbs kid={kid} />} />
+        <Focus intro="opening" width={PAGE}>
+          <Buddy mood="think" size={140} className="breathe" />
+          <h1 className="text-3xl">Fig is writing your book…</h1>
+          <p className="text-muted">{params.get("topic")}</p>
+        </Focus>
+        <BottomNav />
+      </Screen>
+    );
+  }
 
   if (stage === "pick") {
     return (
