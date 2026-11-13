@@ -41,6 +41,9 @@ Without it, Fig falls back to the browser's own speech synthesis, so the app sti
 5. **Remember.** The report, the words to practise and what Fig learned about the child go to D1 and
    to the memory bucket, so the next story is written knowing them.
 
+Every story is a book: a real title, a cover drawn in pixel art seeded from that title, and the
+child's name on it. The same art animates beside the passage while they read.
+
 ## Layout
 
 | Path | What it does |
@@ -61,6 +64,10 @@ Without it, Fig falls back to the browser's own speech synthesis, so the app sti
 | `app/components/buddy.tsx` | Fig. One SVG, five moods: hi, listen, cheer, think, sad |
 | `app/components/chrome.tsx` | Top nav, bottom nav, hearts, stars, streak, the meter, the action bar |
 | `app/components/passage.tsx` | The story, word by word: read, missed, and the quote being cited |
+| `app/components/scene.tsx` | The scene beside the story: loads `scene.wasm` and blits a frame at a time |
+| `app/components/cover.tsx` | A book: its pixel art, its title, and who it was read by |
+| `app/components/voices.tsx` | Voice: female, male, every voice model and id, and cloning your own |
+| `scene/src/lib.rs` | The pixel-art painter, in Rust. No dependencies, no allocation, 28 KB of wasm |
 | `legacy-python/` | The first Reading Buddy, FastAPI and Gutenberg. Kept for its scoring and prompts |
 
 ## The look
@@ -77,6 +84,36 @@ vision and it is the most forgiving face a new reader can sound out.
 The shape is from [otterspeak](https://github.com/brandonmlicea/otterspeak): a top nav that holds only
 what matters right now (quit, the meter, the hearts), a bottom nav of three tabs, chunky buttons with a
 hard shadow a child can hit, and one job centred on the screen at a time.
+
+## The scene
+
+`scene/` is a Rust crate with no dependencies and no allocation — one static buffer, one export:
+
+```rust
+paint(seed, kind, width, height, beat) -> *const u8   // RGBA, straight into a canvas
+```
+
+It draws one of six places (meadow, sea, space, forest, night, dawn) in dithered pixel art, in the
+spirit of [headstart-landing](https://github.com/brandonmlicea/headstart-landing)'s painter and
+[papermache](https://github.com/brandonmlicea/papermache)'s scene-from-a-description idea, but small
+enough to run a frame at a time in a child's browser: 28 KB of wasm, built with
+
+```sh
+cd scene && cargo build --release --target wasm32-unknown-unknown
+cp target/wasm32-unknown-unknown/release/fig_scene.wasm ../public/scene.wasm
+```
+
+`seed` comes from the child and the book, so a story always looks like itself. `beat` is the
+milliseconds since the scene opened: clouds drift, waves roll, stars twinkle, trees sway, and Fig and
+a friend breathe and hop. The same call with `still` renders a book cover.
+
+## Voices
+
+Fig speaks with ElevenLabs. The progress panel offers female, male, or **clone my voice** — about
+thirty seconds of reading goes to ElevenLabs instant voice cloning and comes back as a voice id saved
+on the reader. A sheet lists every voice model and id on the account with a preview; picking one saves
+and takes effect on the next thing Fig says. Cloning needs an ElevenLabs plan that allows it; without
+one the app says so and keeps the voice it had.
 
 ## Cloudflare
 

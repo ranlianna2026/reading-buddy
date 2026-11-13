@@ -2,6 +2,8 @@ import { Link, redirect } from "react-router";
 
 import { Buddy } from "~/components/buddy";
 import { BottomNav, Crumbs, Screen, TopNav } from "~/components/chrome";
+import { Cover } from "~/components/cover";
+import type { Place } from "~/components/scene";
 import { userOf } from "~/lib/auth.server";
 import { heartsNow } from "~/lib/kid";
 import { kidOf } from "~/lib/kid.server";
@@ -55,11 +57,11 @@ export default function Library({ loaderData }: Route.ComponentProps) {
         {read.length > 0 && (
           <section className="mb-6">
             <h2 className="mb-2 text-xl">Stories you have read</h2>
-            <ul className="card divide-y-2 divide-line p-0">
+            <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               {read.map((row) => (
-                <li key={row.id} className="flex items-center justify-between gap-3 px-5 py-4">
-                  <span className="font-medium">{row.title}</span>
-                  <span className="text-sm text-muted">
+                <li key={row.id} className="flex flex-col items-center gap-1">
+                  <Cover title={row.title} by={kid.name} seed={row.seed} place={row.place as Place} wide />
+                  <span className="text-xs text-muted">
                     {row.wcpm} wpm · {row.accuracy}%
                   </span>
                 </li>

@@ -5,7 +5,9 @@ import { After, type Report } from "~/components/after";
 import { Buddy } from "~/components/buddy";
 import { ActionBar, BottomNav, Crumbs, Focus, Hearts, Meter, Screen, TopNav } from "~/components/chrome";
 import { Mic } from "~/components/mic";
+import { Cover } from "~/components/cover";
 import { Passage } from "~/components/passage";
+import { Scene, type Place } from "~/components/scene";
 import { Idea, IDEAS } from "~/components/picks";
 import { post } from "~/lib/api";
 import { userOf } from "~/lib/auth.server";
@@ -17,7 +19,7 @@ import type { Route } from "./+types/read";
 
 export const meta = () => [{ title: "Read · Reading Buddy" }];
 
-type Story = { title: string; passage: string; topic: string; stretch: string[]; words: number; level: number };
+type Story = { title: string; passage: string; place: Place; seed: number; by: string; topic: string; stretch: string[]; words: number; level: number };
 type Question = { kind: string; question: string; answer: string; quote: string };
 type Verdict = { verdict: string; feedback: string; hint: string; quote: string };
 
@@ -229,6 +231,8 @@ export default function Read({ loaderData }: Route.ComponentProps) {
         comprehension,
         practiceWords: result.practiceWords,
         notes: praise.notes,
+        place: story.place,
+        seed: story.seed,
         detail: { heard, miscues: result.miscues },
       });
       setReport({ said: praise.said, stars: kept.stars_won, streak: kept.streak, right, asked: questions.length });
@@ -307,12 +311,21 @@ export default function Read({ loaderData }: Route.ComponentProps) {
           middle={<Meter at={place} of={story.words} />}
           right={<Hearts n={kid.hearts} />}
         />
-        <main className="mx-auto w-full max-w-2xl flex-1 px-5">
-          <h1 className="mb-3 text-center text-2xl">{story.title}</h1>
-          <div className="card p-6">
-            <Passage text={story.passage} upTo={listening ? place : figAt} onWord={(word) => say(word, "read")} />
+        <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 px-5 md:flex-row md:items-start">
+          <div className="min-w-0 flex-1">
+            <h1 className="mb-1 text-center text-2xl md:text-left">{story.title}</h1>
+            <p className="mb-3 text-center text-sm text-muted md:text-left">by {story.by}</p>
+            <div className="card p-6">
+              <Passage text={story.passage} upTo={listening ? place : figAt} onWord={(word) => say(word, "read")} />
+            </div>
+            {error && <p className="mt-3 text-center text-berry-ink">{error}</p>}
           </div>
-          {error && <p className="mt-3 text-center text-berry-ink">{error}</p>}
+          <aside className="order-first w-full shrink-0 md:order-last md:sticky md:top-24 md:w-56">
+            <div className="overflow-hidden rounded-[22px] border-2 border-line">
+              <Scene seed={story.seed} place={story.place} width={224} height={300} alt={`${story.title}, drawn`} />
+            </div>
+            <p className="mt-2 text-center text-xs text-muted">drawn as you read</p>
+          </aside>
         </main>
         <ActionBar>
           <Mic on={listening} onClick={listening ? stopReading : startReading} label={listening ? "I'm done" : "Read to Fig"} />
@@ -375,6 +388,9 @@ export default function Read({ loaderData }: Route.ComponentProps) {
     <Screen id="page-done">
       <TopNav left={<span className="text-lg font-medium">{kid.name}</span>} right={<Crumbs kid={kid} />} />
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-6">
+        <div className="mb-6 flex justify-center">
+          <Cover title={story.title} by={story.by} seed={story.seed} place={story.place} wide />
+        </div>
         {result && <After title={story.title} score={result} report={report} again={() => setStage("pick")} home={() => go("/me")} />}
         {busy === "finish" && <p className="mt-4 text-center text-muted">Fig is writing it down…</p>}
         {error && <p className="mt-3 text-center text-berry-ink">{error}</p>}

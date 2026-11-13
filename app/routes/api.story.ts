@@ -12,6 +12,8 @@ const BANDS: Record<string, string> = {
   5: "ages 9-10, about 200 words, a vivid word or two worth asking about",
 };
 
+const PLACES = ["meadow", "sea", "space", "forest", "night", "dawn"];
+
 export async function action({ request }: Route.ActionArgs) {
   return respond(async () => {
     const body = await guard(request);
@@ -29,7 +31,9 @@ export async function action({ request }: Route.ActionArgs) {
       `${asPrompt(name, memories)}\n\n` +
         (topic ? `${name} asked for a story about: ${topic}.\n` : `Pick a subject ${name} would love.\n`) +
         "Write the story and answer as JSON: " +
-        '{"title": "three words or fewer", "passage": "the story, one or two short paragraphs", ' +
+        '{"title": "a real storybook title, two to five words, no quotes, no subtitle", ' +
+        '"passage": "the story, one or two short paragraphs", ' +
+        `"place": "where it happens, one of: ${PLACES.join(", ")}", ` +
         '"topic": "one real-world thing in the story worth a fun fact", ' +
         '"stretch": ["up to three words in the story that are worth talking about"]}',
       900,
@@ -38,13 +42,27 @@ export async function action({ request }: Route.ActionArgs) {
 
     const passage = text(made.passage, 1600).replace(/\s+/g, " ").trim();
     if (!passage) throw new Error("The story came back empty.");
+    const title = text(made.title, 60).replace(/^["'“”]+|["'“”.]+$/g, "") || "A Story";
+    const place = PLACES.includes(String(made.place)) ? String(made.place) : "meadow";
     return {
-      title: text(made.title, 60) || "A story",
+      title,
       passage,
+      place,
+      seed: seedOf(`${kid?.id ?? "guest"}:${title}:${passage.length}`),
+      by: name,
       topic: text(made.topic, 90),
       stretch: Array.isArray(made.stretch) ? made.stretch.map((word) => text(word, 30)).filter(Boolean).slice(0, 3) : [],
       words: passage.split(/\s+/).filter(Boolean).length,
       level: Number(level),
     };
   });
+}
+
+function seedOf(words: string) {
+  let seed = 2166136261;
+  for (let i = 0; i < words.length; i++) {
+    seed ^= words.charCodeAt(i);
+    seed = Math.imul(seed, 16777619);
+  }
+  return seed >>> 0;
 }

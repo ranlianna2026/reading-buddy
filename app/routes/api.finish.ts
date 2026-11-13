@@ -19,6 +19,8 @@ export async function action({ request }: Route.ActionArgs) {
       wcpm: count(body.wcpm, 0, 400, 0),
       accuracy: count(body.accuracy, 0, 100, 0),
       comprehension: count(body.comprehension, 0, 100, 0),
+      place: text(body.place, 12) || "meadow",
+      seed: Math.abs(Math.round(Number(body.seed))) % 4294967295 || 0,
       detail: body.detail ?? null,
     };
     await keepReading(kid.id, reading);
