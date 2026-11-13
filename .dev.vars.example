@@ -1,0 +1,4 @@
+ELEVENLABS_API_KEY=sk_your_elevenlabs_key
+
+# AI_API_KEY (Celeris) is checked in on purpose, in wrangler.json vars,
+# so anyone who clones this repo can run it. Everything else is a secret.

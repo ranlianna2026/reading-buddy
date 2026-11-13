@@ -1,35 +1,105 @@
 # 📚 Reading Buddy
 
-A voice reading tutor for kids. Pick a book, read it aloud, then talk about it.
+A reading buddy for kids. Pick a story, read it out loud to **Fig**, then talk about it.
 
-1. **"What are you reading today?"** Say a title, type it, tap a quick pick, or snap a photo of the page.
-   - **Keenable** searches Project Gutenberg (public domain) and fetches the real book text, which becomes the answer key.
-   - **Muse Spark** fixes typography only (drop caps, captions); code checks the cleaned text still matches the book ≥ 95% word-for-word.
-   - A page photo is transcribed by **Muse Spark** vision.
-2. **Read aloud.** Words light up as the child reads (Chrome Web Speech API). When they finish, **code, not a model**, aligns the transcript with the text: words correct per minute (WCPM), accuracy, misread and skipped words marked on the page.
-3. **Talk about it.** Muse Spark asks 3 spoken questions (recall, inference, vocabulary, preferring a word the child stumbled on), grades each spoken answer by meaning, and gives a hint and one retry. Every judgment cites a quote that code verifies is really in the passage, and that line lights up in the story. Questions are generated while the child reads, so there is no wait.
-4. **Report + learn more.** Reading speed, accuracy, comprehension score, words to practice (tap to hear), and a kid-safe fun fact found with **Keenable** search (`safety_mode: strict`) with its source.
+React Router 8 on a Cloudflare Worker, with D1 for accounts and progress, two R2 buckets (one for the
+project, one for the child's memory), cookie sessions, passkeys, Celeris for the words and ElevenLabs
+for the voice. No domain to buy: the Worker's own `*.workers.dev` host is the passkey relying party.
 
-## Run
+## Run it
 
-```bash
-uv venv -p 3.12 .venv && VIRTUAL_ENV=.venv uv pip install fastapi "uvicorn[standard]" httpx keenable python-multipart pillow
-cp .env.example .env   # add MODEL_API_KEY (Meta Model API) and KEENABLE_API_KEY
-.venv/bin/uvicorn app:app --port 8010
+```sh
+npm install
+npx wrangler d1 migrations apply reading-buddy --local
+npm run dev            # http://localhost:5320
 ```
 
-Open http://127.0.0.1:8010 in **Chrome** (speech recognition) and allow the microphone.
-Without `KEENABLE_API_KEY` the app uses Keenable's keyless public pool.
+Open it in **Chrome or Edge** and allow the microphone — reading aloud is recognised in the browser.
+
+The Celeris key is checked in (`wrangler.json` → `vars.AI_API_KEY`) on purpose, so a clone just runs.
+Everything else is a secret. For Fig's real voice, put your ElevenLabs key in `.dev.vars`:
+
+```sh
+cp .dev.vars.example .dev.vars   # ELEVENLABS_API_KEY=sk_…
+```
+
+Without it, Fig falls back to the browser's own speech synthesis, so the app still works end to end.
+
+## The loop
+
+1. **Pick.** The child says or taps a subject. Celeris (`celeris-1`) writes an original story at their
+   reading band (age 5 → 11, 55 → 200 words), seeded with what Fig remembers about them.
+2. **Read aloud.** Chrome's Web Speech API recognises the child's voice in the browser; audio never
+   leaves the device. Words light up as they are read. Comprehension questions are written in the
+   background while the child reads, so there is no wait at the end.
+3. **Score, by code.** `app/lib/scoring.ts` aligns the transcript against the passage with an LCS
+   diff — no model — and gives words correct per minute, accuracy, and every misread or skipped word
+   marked on the page. Only the part the child reached is scored, so stopping early is not an error.
+4. **Talk about it.** Three spoken questions (recall, inference, vocabulary — preferring a word the
+   child stumbled on). Each answer is graded by meaning, with a hint and one retry. Every judgement
+   cites a quote that **code verifies is really in the passage**, and that line lights up in the story.
+5. **Remember.** The report, the words to practise and what Fig learned about the child go to D1 and
+   to the memory bucket, so the next story is written knowing them.
 
 ## Layout
 
-| File | What it does |
-|---|---|
-| `rb/books.py` | Keenable search/fetch of Gutenberg books, story-start detection, passage selection, verified typography cleanup |
-| `rb/scoring.py` | Transcript-to-text alignment: WCPM, accuracy, miscues (no model) |
-| `rb/tutor.py` | Muse Spark questions, answer grading with verified quotes, page-photo reading, Keenable "learn more" |
-| `rb/meta_api.py` | Minimal Meta Model API client (Muse Spark, JSON schema, vision) |
-| `app.py` | FastAPI endpoints |
-| `static/index.html` | Voice UI (Web Speech recognition + speech synthesis) |
+| Path | What it does |
+| --- | --- |
+| `wrangler.json` | The Worker: D1, both R2 buckets, Workers AI, the rate limiter, the vars |
+| `migrations/0001_init.sql` | users, sessions, credentials, challenges, kids, readings, memories |
+| `workers/app.ts` | The whole Worker: hands every request to React Router |
+| `app/routes.ts` | Pages (`/hello`, `/read`, `/library`, `/me`) and the `/api/*` endpoints |
+| `app/lib/auth.server.ts` | PBKDF2 passwords, opaque session tokens hashed in D1, the cookie |
+| `app/lib/passkey.server.ts` | WebAuthn register and sign-in, relying party taken from the request host |
+| `app/lib/ai.server.ts` | Celeris, OpenAI-compatible: `ask`, `askJson`, the rate-limit guard |
+| `app/lib/voice.server.ts` | ElevenLabs text-to-speech; speech-to-text via Celeris, then Workers AI Whisper |
+| `app/lib/scoring.ts` | Transcript-to-passage alignment: WCPM, accuracy, miscues. Runs in the browser |
+| `app/lib/memory.server.ts` | What Fig remembers: the D1 index and the R2 memory book |
+| `app/lib/kid.server.ts` | The reader: hearts (5, one back every 20 minutes), streak, stars |
+| `app/lib/talk.ts` | The browser side of voice: listen, speak, fall back to the browser voice |
+| `app/lib/motion.ts` | GSAP: the entrance stagger behind every focused screen |
+| `app/components/buddy.tsx` | Fig. One SVG, five moods: hi, listen, cheer, think, sad |
+| `app/components/chrome.tsx` | Top nav, bottom nav, hearts, stars, streak, the meter, the action bar |
+| `app/components/passage.tsx` | The story, word by word: read, missed, and the quote being cited |
+| `legacy-python/` | The first Reading Buddy, FastAPI and Gutenberg. Kept for its scoring and prompts |
 
-Privacy: audio never leaves the browser (speech is recognized locally by Chrome's API); only text is sent to the server, and nothing is stored. Books are public domain.
+## The look
+
+One warm palette in OKLCH, in `app/app.css`, generated and contrast-checked with
+[oklchemy](https://github.com/brandonmlicea/oklchemy) (`palette 145 --style=paper --dark`): every text
+pair passes WCAG AA and APCA. Neutrals share one warm hue (84), the buddy's leaf green is hue 145, the
+sun is 85 and the hearts are 25. Light and dark both come from the same tokens.
+
+Type is two faces: **Fredoka** for the interface, rounded and friendly, and **Atkinson Hyperlegible**
+for the story itself, at 24px with loose line height and open word spacing — it was drawn for low
+vision and it is the most forgiving face a new reader can sound out.
+
+The shape is from [otterspeak](https://github.com/brandonmlicea/otterspeak): a top nav that holds only
+what matters right now (quit, the meter, the hearts), a bottom nav of three tabs, chunky buttons with a
+hard shadow a child can hit, and one job centred on the screen at a time.
+
+## Cloudflare
+
+Already made on the account:
+
+| Thing | Name |
+| --- | --- |
+| D1 | `reading-buddy` (`8ed2e9e4-5513-4094-b0d7-55b538097d22`) |
+| R2 | `reading-buddy` — the project's files |
+| R2 | `reading-buddy-memory` — `kid/<id>/book.json` and `kid/<id>/reading/<id>.json` |
+
+Before the first deploy (not done yet):
+
+```sh
+npx wrangler secret put ELEVENLABS_API_KEY
+npx wrangler d1 migrations apply reading-buddy --remote
+npm run deploy
+```
+
+`workers_dev` is on, so it lands on `reading-buddy.<your-subdomain>.workers.dev`. Passkeys bind to
+whatever host serves the request, so that URL works as-is — no custom domain needed.
+
+## Privacy
+
+The child's voice is recognised in the browser and never uploaded. Only text reaches the Worker.
+What Fig remembers is a short list of notes per child, visible and readable on `/me`.

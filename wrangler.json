@@ -1,0 +1,35 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "reading-buddy",
+  "main": "./workers/app.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "workers_dev": true,
+  "assets": { "binding": "ASSETS" },
+  "vars": {
+    "AI_BASE_URL": "https://inference.celeris.ai/celeris-1/v1",
+    "AI_MODEL": "celeris-1",
+    "AI_API_KEY": "ck_lr4DZmrZG1zNmAHb8oinCRb7I3exN8AzaiaZnpAF2IA",
+    "STT_MODEL": "whisper-1",
+    "VOICE_ID": "21m00Tcm4TlvDq8ikWAM",
+    "VOICE_MODEL": "eleven_turbo_v2_5",
+    "PRODUCT_NAME": "Reading Buddy"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "reading-buddy",
+      "database_id": "8ed2e9e4-5513-4094-b0d7-55b538097d22",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "FILES", "bucket_name": "reading-buddy" },
+    { "binding": "MEMORY", "bucket_name": "reading-buddy-memory" }
+  ],
+  "ai": { "binding": "AI" },
+  "ratelimits": [
+    { "name": "LIMIT", "namespace_id": "5201", "simple": { "limit": 60, "period": 60 } }
+  ]
+}
