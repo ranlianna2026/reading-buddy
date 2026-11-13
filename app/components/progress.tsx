@@ -71,14 +71,14 @@ export function Progress({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-end bg-black/45 p-0 sm:place-items-center sm:p-6"
+      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/50 p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-label="Your progress"
       onClick={onClose}
     >
       <div
-        className="pop card flex max-h-[92svh] w-full max-w-lg flex-col gap-5 overflow-y-auto rounded-b-none p-6 text-left sm:rounded-[28px]"
+        className="pop card my-auto flex max-h-[88svh] w-full max-w-lg flex-col gap-5 overflow-y-auto p-6 text-left"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
