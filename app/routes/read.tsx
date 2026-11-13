@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { redirect, useNavigate, useSearchParams } from "react-router";
 
-import { After, type Report } from "~/components/after";
+import { After, type Move, type Report } from "~/components/after";
 import { Buddy } from "~/components/buddy";
 import { ActionBar, BottomNav, Crumbs, Focus, Hearts, Meter, Screen, TopNav } from "~/components/chrome";
 import { Mic } from "~/components/mic";
@@ -12,7 +12,7 @@ import { Scene, type Place } from "~/components/scene";
 import { post } from "~/lib/api";
 import { userOf } from "~/lib/auth.server";
 import { gradeOf } from "~/lib/grades";
-import { heartsNow } from "~/lib/kid";
+import { heartsNow, levelFor } from "~/lib/kid";
 import { kidOf } from "~/lib/kid.server";
 import { readingPlace, score as grade, type Score } from "~/lib/scoring";
 import { tongueOf } from "~/lib/languages";
@@ -60,7 +60,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
     setBusy("story");
     setError("");
     try {
-      const made = await post<Story>("/api/story", { kidId: kid.id, topic: want, level: gradeOf(kid.grade).level });
+      const made = await post<Story>("/api/story", { kidId: kid.id, topic: want, level: levelFor(kid) });
       setStory(made);
       setStage("reading");
       setHeard("");
@@ -75,7 +75,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
         passage: made.passage,
         age: String(kid.age ?? gradeOf(kid.grade).age),
         language: kid.language,
-        level: gradeOf(kid.grade).level,
+        level: levelFor(kid),
       })
         .then((made) => setQuestions(made.questions))
         .catch(() => setQuestions([]));
@@ -164,7 +164,7 @@ export default function Read({ loaderData }: Route.ComponentProps) {
         practiceWords: result.practiceWords,
         age: String(kid.age ?? 7),
       });
-      const kept = await post<{ stars: number; streak: number; stars_won: number }>("/api/finish", {
+      const kept = await post<{ stars: number; streak: number; stars_won: number; level: Move }>("/api/finish", {
         kidId: kid.id,
         title: story.title,
         words: story.words,
@@ -179,9 +179,10 @@ export default function Read({ loaderData }: Route.ComponentProps) {
         notes: praise.notes,
         place: story.place,
         seed: story.seed,
+        finished: result.finished,
         detail: { heard, miscues: result.miscues },
       });
-      setReport({ said: praise.said, stars: kept.stars_won, streak: kept.streak, right: won, asked: asked_n });
+      setReport({ said: praise.said, stars: kept.stars_won, streak: kept.streak, right: won, asked: asked_n, level: kept.level });
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "Your reading was saved without a note.");
     }

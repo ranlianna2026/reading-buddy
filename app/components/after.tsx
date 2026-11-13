@@ -6,7 +6,8 @@ import type { Score } from "~/lib/scoring";
 import { Buddy } from "./buddy";
 import { Star } from "./chrome";
 
-export type Report = { said: string; stars: number; streak: number; right: number; asked: number };
+export type Move = { from: number; to: number; why: string };
+export type Report = { said: string; stars: number; streak: number; right: number; asked: number; level: Move };
 
 export function After({
   title,
@@ -65,6 +66,14 @@ export function After({
           <p className="mono text-muted">speed · fluency · understanding, together</p>
         </div>
       </div>
+
+      {report?.level && (
+        <p className="bubble w-full text-left">
+          {report.level.to > report.level.from ? "Level up! " : ""}
+          Reading level {report.level.from}
+          {report.level.to !== report.level.from ? ` → ${report.level.to}` : ""}: {report.level.why}.
+        </p>
+      )}
 
       <dl className="grid w-full grid-cols-3 gap-3">
         <Tile label="Words a minute" value={score.wcpm} />

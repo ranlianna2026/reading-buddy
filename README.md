@@ -125,6 +125,12 @@ a correct answer always moves on and the last try never asks for another. Fig re
 for children who cannot read them yet, two silent tries move the quiz along rather than stall, and a
 child who disagrees can say **I think I was right** for a careful second opinion.
 
+The level is not fixed to the grade. After every reading the standard instructional bands move it:
+95% accuracy with two thirds of the questions understood goes up a level, under 90% accuracy (or under
+a third understood) goes down, anything between stays for more practice. The grade sets where a reader
+starts and the words-a-minute they are measured against; the level is where they are now, and the
+report card says which way it moved and why.
+
 ## The reading score
 
 Three measures, one number out of a hundred, on the profile — the third tab in the dock.

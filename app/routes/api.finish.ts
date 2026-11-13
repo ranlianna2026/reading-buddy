@@ -1,6 +1,6 @@
 import { count, guard, respond, text } from "~/lib/ai.server";
 import { id, userOf } from "~/lib/auth.server";
-import { cheer, kidOf } from "~/lib/kid.server";
+import { cheer, kidOf, settle } from "~/lib/kid.server";
 import { keepReading, remember, type Note } from "~/lib/memory.server";
 import type { Route } from "./+types/api.finish";
 
@@ -42,7 +42,13 @@ export async function action({ request }: Route.ActionArgs) {
     for (const word of practice.slice(0, 6)) notes.push({ kind: "word", subject: word, note: "tripped on this one" });
     await remember(kid.id, notes);
 
+    const level = await settle(kid, {
+      accuracy: reading.accuracy,
+      comprehension: reading.comprehension,
+      finished: body.finished !== false,
+      asked: reading.asked,
+    });
     const stars = reading.accuracy >= 95 ? 3 : reading.accuracy >= 85 ? 2 : 1;
-    return { reading: reading.id, ...(await cheer(kid, stars)), stars_won: stars };
+    return { reading: reading.id, ...(await cheer(kid, stars)), stars_won: stars, level };
   });
 }

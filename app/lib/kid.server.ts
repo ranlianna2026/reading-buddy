@@ -1,11 +1,12 @@
 import { env } from "cloudflare:workers";
 
 import { id } from "./auth.server";
-import { day, heartsNow, MAX_HEARTS, type Kid } from "./kid";
+import { gradeOf } from "./grades";
+import { day, heartsNow, levelFor, MAX_HEARTS, type Kid } from "./kid";
 
 export async function kidsOf(userId: string) {
   const rows = await env.DB.prepare(
-    "SELECT id, name, age, hearts, hearts_at, streak, streak_day, stars, language, grade FROM kids WHERE user_id = ?1 ORDER BY created_at"
+    "SELECT id, name, age, hearts, hearts_at, streak, streak_day, stars, language, grade, level FROM kids WHERE user_id = ?1 ORDER BY created_at"
   )
     .bind(userId)
     .all<Kid>();
@@ -45,4 +46,28 @@ export async function cheer(kid: Kid, stars: number) {
     .bind(kid.id, stars, streak, today)
     .run();
   return { stars: kid.stars + stars, streak };
+}
+
+// Standard instructional bands: 95% accuracy and two thirds understood moves up, under 90% moves down.
+export async function settle(kid: Kid, read: { accuracy: number; comprehension: number; finished: boolean; asked: number }) {
+  const was = levelFor(kid);
+  const next =
+    !read.asked && !read.accuracy
+      ? was
+      : read.accuracy >= 95 && read.comprehension >= 67 && read.finished
+        ? Math.min(5, was + 1)
+        : read.accuracy < 90 || (read.asked > 0 && read.comprehension < 34)
+          ? Math.max(1, was - 1)
+          : was;
+  if (next !== kid.level) await env.DB.prepare("UPDATE kids SET level = ?2 WHERE id = ?1").bind(kid.id, next).run();
+  return {
+    from: was,
+    to: next,
+    why:
+      next > was
+        ? "accurate reading and good understanding"
+        : next < was
+          ? "this one was hard, so the next story will be a little easier"
+          : "just right, so we will stay here for more practice",
+  };
 }
