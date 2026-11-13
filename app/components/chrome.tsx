@@ -62,6 +62,7 @@ export function Crumbs({ kid }: { kid: { name: string; hearts: number; streak: n
 }
 
 const TABS = [
+  { to: "/", label: "Home", icon: "home" },
   { to: "/read", label: "Read", icon: "book" },
   { to: "/library", label: "Stories", icon: "shelf" },
   { to: "/me", label: "Me", icon: "buddy" },
@@ -71,7 +72,9 @@ function TabIcon({ name }: { name: (typeof TABS)[number]["icon"] }) {
   if (name === "buddy") return <Head size={30} />;
   return (
     <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" aria-hidden>
-      {name === "book" ? (
+      {name === "home" ? (
+        <path d="M3.6 10.6 12 4l8.4 6.6V19a1 1 0 0 1-1 1h-4.6v-5.2H9.2V20H4.6a1 1 0 0 1-1-1z" />
+      ) : name === "book" ? (
         <>
           <path d="M12 6.5C10.4 5 8.2 4.4 4.5 4.4v13c3.7 0 5.9.6 7.5 2.1 1.6-1.5 3.8-2.1 7.5-2.1v-13c-3.7 0-5.9.6-7.5 2.1z" />
           <path d="M12 6.5v13" />

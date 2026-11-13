@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 
 const COOKIE = "rb_session";
+const READER = "rb_reader";
 const TTL = 60 * 60 * 24 * 60 * 1000;
 // Workers refuse PBKDF2 above 100,000 iterations; dev allows more, so this only shows up in production.
 const ROUNDS = 100_000;
@@ -60,6 +61,14 @@ export function sessionCookie(request: Request, token: string) {
   const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
   return `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${TTL / 1000}${secure}`;
 }
+
+// Which child is reading on this device. Not secret: the loader still checks it belongs to the account.
+export function readerCookie(request: Request, kidId: string) {
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
+  return `${READER}=${kidId}; Path=/; SameSite=Lax; Max-Age=${TTL / 1000}${secure}`;
+}
+
+export const readerOf = (request: Request) => readCookie(request, READER);
 
 export function clearedCookie(request: Request) {
   const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";

@@ -2,14 +2,14 @@ import { env } from "cloudflare:workers";
 
 import { Refusal, respond, text } from "~/lib/ai.server";
 import { userOf } from "~/lib/auth.server";
-import { kidOf } from "~/lib/kid.server";
+import { reading } from "~/lib/kid.server";
 import { PICKS, voices, type Voice } from "~/lib/voice.server";
 import type { Route } from "./+types/api.voices";
 
 async function kid(request: Request) {
   const user = await userOf(request);
   if (!user) throw new Refusal("Sign in first.", 401);
-  const found = await kidOf(user.id);
+  const found = await reading(request, user.id);
   if (!found) throw new Refusal("No reader yet.", 404);
   return found;
 }

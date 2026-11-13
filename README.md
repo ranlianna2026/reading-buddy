@@ -64,6 +64,10 @@ child's name on it. The same art animates beside the passage while they read.
 | `app/lib/grades.ts` | Pre-K to 6th grade: the age, the starting level, the words-a-minute norm |
 | `app/lib/quiz.ts` | The quiz model: difficulty by level, code-checked options, answering by voice |
 | `app/lib/report.ts` | The reading score: speed, fluency and understanding compiled into one number |
+| `app/lib/levels.ts` | The five-level ladder, first reader to advanced reader |
+| `app/lib/parent.server.ts` | The parent dashboard, rolled up day by day out of D1 |
+| `app/routes/home.tsx` | Home: who is reading, their level, and the four doors |
+| `app/routes/parent.tsx` | Parent dashboard: the chart, the fortnight, the skills, the words |
 | `app/components/quiz.tsx` | The quiz: tap or say, two tries, a hint, the quote, and an appeal |
 | `app/components/score.tsx` | The reading score on the profile: the dial and where it came from |
 | `app/lib/picture.server.ts` | The picture model: Muse Image styles, prompts and reference edits, cached in R2 |
@@ -85,6 +89,27 @@ vision and it is the most forgiving face a new reader can sound out.
 The shape is from [otterspeak](https://github.com/brandonmlicea/otterspeak): a top nav that holds only
 what matters right now (quit, the meter, the hearts), a bottom nav of three tabs, chunky buttons with a
 hard shadow a child can hit, and one job centred on the screen at a time.
+
+## Home, readers, and the parent dashboard
+
+`/` is the home screen. It greets whoever is reading, shows their level on the five-rung ladder
+(first reader to advanced reader), their streak, stories and words learned, a sparkline of reading
+speed, their strongest and weakest kinds of question as stars, the words they are practising, and
+four doors: read a book, the shelf, their own reading, and the parent dashboard.
+
+**More than one child.** Readers are chips across the top of home: tap one to switch, or add another
+with their name and grade. The choice lives in an `rb_reader` cookie and every loader resolves it
+against the account, so a shared iPad can carry a whole family and nobody can read as a child who is
+not theirs.
+
+**`/parent`** is the grown-up view, ported from the Python dashboard: day streak, minutes, books,
+words mastered and the reading score across the top; the level and language; a chart where the bars
+are words a minute and the dotted line is understanding; a fortnight of days with sessions, minutes,
+speed, accuracy, understanding and titles; how they do on each kind of question; and the words being
+practised. It opens on whoever is reading, with a tab for each child.
+
+Answers are now kept per question kind in an `answers` table, which is what makes the skill
+breakdown — and home's star ratings — real rather than estimated.
 
 ## The quiz
 

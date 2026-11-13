@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 
 import { guard, respond, text } from "~/lib/ai.server";
 import { userOf } from "~/lib/auth.server";
-import { kidOf } from "~/lib/kid.server";
+import { reading } from "~/lib/kid.server";
 import { tongueOf } from "~/lib/languages";
 import { speak, speakAlong } from "~/lib/voice.server";
 import type { Route } from "./+types/api.speak";
@@ -10,7 +10,7 @@ import type { Route } from "./+types/api.speak";
 async function chosen(request: Request) {
   const user = await userOf(request);
   if (!user) return {};
-  const kid = await kidOf(user.id);
+  const kid = await reading(request, user.id);
   if (!kid) return {};
   const row = await env.DB.prepare("SELECT voice FROM kids WHERE id = ?1").bind(kid.id).first<{ voice: string | null }>();
   return { id: row?.voice ?? undefined, tag: tongueOf(kid.language).tag };
