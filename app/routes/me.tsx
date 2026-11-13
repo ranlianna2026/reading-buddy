@@ -16,7 +16,7 @@ import { post } from "~/lib/api";
 import { say, speakIn } from "~/lib/talk";
 import type { Route } from "./+types/me";
 
-export const meta = () => [{ title: "Me · Reading Buddy" }];
+export const meta = () => [{ title: "Me · Learning Buddy" }];
 
 const KINDS: Record<string, string> = {
   likes: "Loves",

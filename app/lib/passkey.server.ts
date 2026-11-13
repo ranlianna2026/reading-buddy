@@ -41,7 +41,7 @@ export async function registerOptions(request: Request, user: { id: string; emai
   const { rpID } = siteOf(request);
   const known = await env.DB.prepare("SELECT id, transports FROM credentials WHERE user_id = ?1").bind(user.id).all<Credential>();
   const options = await generateRegistrationOptions({
-    rpName: env.PRODUCT_NAME ?? "Reading Buddy",
+    rpName: env.PRODUCT_NAME ?? "Learning Buddy",
     rpID,
     userName: user.email,
     userDisplayName: user.email.split("@")[0],
