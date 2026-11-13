@@ -44,7 +44,7 @@ def illustrate(page_text, ref_image=None, title="", kind="book", cast=""):
         body["images"] = [{"image_url": ref_image}]
         endpoint = "/images/edits"
     r = httpx.post(meta_api.BASE_URL + endpoint, headers={"Authorization": f"Bearer {os.environ['MODEL_API_KEY']}"},
-                   json=body, timeout=180)
+                   json=body, timeout=httpx.Timeout(55, connect=10))
     if r.status_code >= 400:
         raise meta_api.APIError(f"{r.status_code}: {r.text[:300]}")
     data = base64.b64decode(r.json()["data"][0]["b64_json"])

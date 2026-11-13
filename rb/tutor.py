@@ -2,17 +2,24 @@
 really appears in the passage. Keenable adds kid-safe "learn more" background with sources."""
 import random, re
 
+from . import lang as L
 from .books import ksearch
 from .meta_api import chat_json, data_url
 from .scoring import norm
 
 SYSTEM = ("You are Reading Buddy, a warm, patient reading tutor for children aged {age}. Use short, simple "
-          "sentences. Be encouraging and specific. Never shame. Ground everything in the passage.")
+          "sentences. Be encouraging and specific. Never shame. Ground everything in the passage. "
+          "Write everything you say in {language}; quotes must be copied exactly from the passage.")
 
 
-def quote_ok(quote, passage):
-    q = " ".join(norm(w) for w in quote.split() if norm(w))
-    p = " ".join(norm(w) for w in passage.split() if norm(w))
+def sysmsg(age, lang):
+    extra = " Use Simplified Chinese characters only; convert any Traditional characters from sources." if lang == "zh" else ""
+    return SYSTEM.format(age=age, language=L.get(lang)["name"]) + extra
+
+
+def quote_ok(quote, passage, lang="en"):
+    q = " ".join(norm(w) for w in L.tokens(quote, lang) if norm(w))
+    p = " ".join(norm(w) for w in L.tokens(passage, lang) if norm(w))
     return bool(q) and q in p
 
 
@@ -32,20 +39,20 @@ Q_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["quest
             "answer_index": {"type": "integer", "description": "index of the right option in choices; -1 for inference"}}}}}}
 
 
-def make_questions(passage, practice_words=(), age="6-10", focus=None):
+def make_questions(passage, practice_words=(), age="6-10", focus=None, lang="en"):
     hint = f"Words the child stumbled on: {', '.join(practice_words)}. " if practice_words else ""
     if focus:
         hint += (f"This child finds {focus} questions hard: make the {focus} question gentle and scaffolded, "
                  "building on an easy detail first. ")
-    out = chat_json(SYSTEM.format(age=age),
-                    f"{hint}Write exactly 3 questions about this passage: one 'recall' (what happened / who), "
+    out = chat_json(sysmsg(age, lang),
+                    f"{hint}Write exactly 3 questions in {L.get(lang)['name']} about this passage: one 'recall' (what happened / who), "
                     "as single choice with 3 short options; "
                     "one 'inference' (why / how did a character feel), one 'vocabulary' (meaning of a word "
                     "from the passage, preferably one the child stumbled on) as single choice with 3 short options; "
                     "the inference question is open-ended (no options). Each needs an expected answer "
                     "and a short exact quote from the passage that supports it.\n\nPassage:\n" + passage,
                     Q_SCHEMA, "questions")
-    qs = [q for q in out["questions"] if quote_ok(q["quote"], passage)] or out["questions"][:3]
+    qs = [q for q in out["questions"] if quote_ok(q["quote"], passage, lang)] or out["questions"][:3]
     return [_shape(q) for q in qs[:3]], out.get("learn_topic", "")
 
 
@@ -73,8 +80,8 @@ G_SCHEMA = {"type": "object", "additionalProperties": False,
                 "quote": {"type": "string", "description": "exact words from the passage that show the answer"}}}
 
 
-def grade(passage, q, answer, age="6-10", attempt=1):
-    out = chat_json(SYSTEM.format(age=age),
+def grade(passage, q, answer, age="6-10", attempt=1, lang="en"):
+    out = chat_json(sysmsg(age, lang),
                     f"Passage:\n{passage}\n\nQuestion ({q['kind']}): {q['question']}\nExpected answer: "
                     f"{q['expected_answer']}\nChild's spoken answer (speech-to-text, may have small errors): "
                     f"\"{answer}\"\nAttempt {attempt}. Judge meaning, not wording or spelling. Mark 'correct' for any "
@@ -82,8 +89,8 @@ def grade(passage, q, answer, age="6-10", attempt=1):
                     "give a hint without revealing the answer"
                     + (" (this is the last try, so gently explain the answer)." if attempt >= 2 else "."),
                     G_SCHEMA, "grade")
-    if not quote_ok(out.get("quote", ""), passage):
-        out["quote"] = q["quote"] if quote_ok(q["quote"], passage) else ""
+    if not quote_ok(out.get("quote", ""), passage, lang):
+        out["quote"] = q["quote"] if quote_ok(q["quote"], passage, lang) else ""
     # guardrails on the tutor's choice: correct always moves on; last try never asks for another retry
     if out["verdict"] == "correct":
         out["next_action"] = "praise_move_on"
@@ -97,13 +104,16 @@ L_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["fact"
     "source_index": {"type": "integer"}}}
 
 
-def learn_more(topic, title, age="6-10"):
-    res = ksearch(f"{topic} facts for kids -site:web.archive.org", max_results=5, snippet_max_length=600)
+KIDS = {"en": "facts for kids", "es": "datos para niños", "fr": "pour les enfants", "zh": "儿童 知识"}
+
+
+def learn_more(topic, title, age="6-10", lang="en"):
+    res = ksearch(f"{topic} {KIDS.get(lang, KIDS['en'])} -site:web.archive.org", max_results=5, snippet_max_length=600)
     if not res:
         return None
     ctx = "\n\n".join(f"[{i}] {r.title} ({r.url})\n{r.snippet or ''}" for i, r in enumerate(res))
-    out = chat_json(SYSTEM.format(age=age),
-                    f"A child just read '{title}' and met the word or topic '{topic}'. Using ONLY these search "
+    out = chat_json(sysmsg(age, lang),
+                    f"A child just read '{title}' and met the word or topic '{topic}'. Write the fact in {L.get(lang)['name']}. Using ONLY these search "
                     f"results, write a fun fact about it and give the index of the result you used.\n\n{ctx}",
                     L_SCHEMA, "learn_more")
     i = out.get("source_index", 0)

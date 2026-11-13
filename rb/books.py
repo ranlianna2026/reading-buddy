@@ -13,6 +13,7 @@ from types import SimpleNamespace
 import httpx
 from keenable import Keenable
 
+from . import lang as L
 from .meta_api import chat_json
 from .scoring import norm
 
@@ -27,6 +28,16 @@ def kclient():
 
 
 BUILTIN = {
+    # our own simple retellings of Aesop's fable for each language (public domain story)
+    "la zorra y las uvas": {"title": "La zorra y las uvas", "author": "Esopo", "source": "https://www.gutenberg.org/ebooks/21", "lang": "es",
+        "text": "Una zorra tenía mucha hambre. Vio unas uvas maduras que colgaban de una parra. Saltó y saltó, pero no "
+                "podía alcanzarlas. Por fin se fue y dijo: \"Esas uvas están verdes. No las quiero.\""},
+    "le renard et les raisins": {"title": "Le renard et les raisins", "author": "Ésope", "source": "https://www.gutenberg.org/ebooks/21", "lang": "fr",
+        "text": "Un renard avait très faim. Il vit de beaux raisins mûrs suspendus à une treille. Il sauta et sauta, mais il "
+                "ne pouvait pas les attraper. Alors il partit en disant : « Ils sont trop verts, ils ne sont pas bons. »"},
+    "狐狸和葡萄": {"title": "狐狸和葡萄", "author": "伊索", "source": "https://www.gutenberg.org/ebooks/21", "lang": "zh",
+        "text": "一只狐狸肚子很饿。它看见架子上挂着一串串熟透的葡萄。它跳了又跳，可是怎么也够不着。最后它走开了，"
+                "还说：“这些葡萄是酸的，我才不想吃呢！”"},
     "the fox and the grapes": {
         "title": "The Fox and the Grapes", "author": "Aesop (tr. George Fyler Townsend)",
         "source": "https://www.gutenberg.org/ebooks/21",
@@ -95,19 +106,23 @@ def illustrations(md, base_url):
 _ABBR = re.compile(r"\b(Mr|Mrs|Ms|Dr|St|Mt|Jr|Sr)\.")
 
 
-def sentences(text):
+def sentences(text, lang="en"):
     """Split into sentences without breaking on Mr. / Mrs. / Dr. etc."""
+    if lang != "en":
+        return L.sentences(text, lang)
     t = _ABBR.sub(lambda m: m.group(1) + "\u2024", text)          # one-dot leader as a stand-in for the period
     parts = re.findall(r"[^.!?]+[.!?]+[\"”’']?|[^.!?]+$", t) or [t]
     return [x.replace("\u2024", ".") for x in parts]
 
 
-def split_pages(text, target=35):
-    sents = sentences(text)
+def split_pages(text, target=35, lang="en"):
+    if L.is_cjk(lang):
+        target = 60
+    sents = sentences(text, lang)
     out, cur = [], ""
     for x in sents:
         cur += x
-        if len(cur.split()) >= target:
+        if L.length(cur, lang) >= target:
             out.append(cur.strip()); cur = ""
     if cur.strip():
         out.append(cur.strip())
@@ -134,9 +149,9 @@ def attach_pictures(pages, words, tags):
     return out
 
 
-def search_book(title):
+def search_book(title, hint=""):
     """Keenable search restricted to Project Gutenberg. Returns (gutenberg_id, title, url) or None."""
-    res = ksearch(f"{title} ebook", site="gutenberg.org", max_results=8)
+    res = ksearch(f"{title} {hint} ebook".replace("  ", " "), site="gutenberg.org", max_results=8)
     generic = {"the", "and", "tale", "story", "book", "ebook", "books", "project", "gutenberg", "nonexistent"}
     key = lambda w: re.sub(r"'s$", "", norm(w))
     want = {key(w) for w in title.split() if len(key(w)) > 2} - generic
@@ -228,12 +243,16 @@ def clean_typography(raw):
     return (text, round(ratio, 3)) if ratio >= 0.95 else (raw, round(ratio, 3))
 
 
-def get_passage(title, part=0):
+LANG_HINT = {"en": "", "es": "español", "fr": "français", "zh": "中文"}
+
+
+def get_passage(title, part=0, lang="en"):
     key = title.strip().lower()
     if key in BUILTIN:
         b = BUILTIN[key]
-        return {**b, "part": 0, "parts": 1, "via": "built-in", "match": 1.0}
-    hit = search_book(title)
+        return {**b, "part": 0, "parts": 1, "via": "built-in", "match": 1.0, "lang": b.get("lang", "en"),
+                "pages": [{"text": t, "image_url": None} for t in split_pages(b["text"], lang=b.get("lang", "en"))]}
+    hit = search_book(title, LANG_HINT.get(lang, ""))
     if not hit:
         raise LookupError(f"couldn't find '{title}' on Project Gutenberg")
     gid, found_title, found_url = hit
@@ -242,10 +261,10 @@ def get_passage(title, part=0):
     raw, parts = pick_passage(paras, title, part)
     text, ratio = clean_typography(raw)
     words, tags = illustrations(md, url)
-    pages = attach_pictures(split_pages(text), words, tags)
+    pages = attach_pictures(split_pages(text, lang=lang), words, tags)
     nice = re.sub(r"\s*(by .*|\| Project Gutenberg.*)$", "", found_title).strip()
     if not nice or "/" in nice or "gutenberg" in nice.lower():
         nice = title.strip() if title.strip() != title.strip().lower() else title.strip().title()
     return {"title": nice,
             "source": f"https://www.gutenberg.org/ebooks/{gid}", "text": text, "part": part, "parts": parts,
-            "via": "keenable", "match": ratio, "pages": pages, "pictures": sum(1 for p in pages if p["image_url"])}
+            "via": "keenable", "match": ratio, "pages": pages, "pictures": sum(1 for p in pages if p["image_url"]), "lang": lang}

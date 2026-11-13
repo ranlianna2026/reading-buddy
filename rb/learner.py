@@ -7,6 +7,8 @@ practice queue that the next generated story must reuse; a word is mastered afte
 import json, re, time
 from pathlib import Path
 
+from . import lang as L
+
 DIR = Path(__file__).resolve().parents[1] / "out" / "learners"
 
 # reading level -> story spec used by the story writer and checked by code
@@ -20,20 +22,22 @@ LEVELS = {
 KINDS = ("recall", "inference", "vocabulary")
 
 
-def _path(name):
-    return DIR / ((re.sub(r"[^a-z0-9_-]", "", name.lower()) or "reader") + ".json")
+def _path(name, lang="en"):
+    base = re.sub(r"[^a-z0-9_-]", "", name.lower()) or "reader"
+    return DIR / (base + ("" if lang == "en" else f"-{lang}") + ".json")      # one profile per language
 
 
-def load(name):
-    p = _path(name)
+def load(name, lang="en"):
+    p = _path(name, lang)
     if p.exists():
         return json.loads(p.read_text())
-    return {"name": name, "level": 2, "practice": [], "mastered": [], "skills": {k: [0, 0] for k in KINDS}, "history": []}
+    return {"name": name, "lang": lang, "level": 2, "practice": [], "mastered": [], "skills": {k: [0, 0] for k in KINDS},
+            "history": []}
 
 
 def save(prof):
     DIR.mkdir(parents=True, exist_ok=True)
-    _path(prof["name"]).write_text(json.dumps(prof, indent=1))
+    _path(prof["name"], prof.get("lang", "en")).write_text(json.dumps(prof, indent=1, ensure_ascii=False))
 
 
 def focus_skill(prof):
@@ -43,9 +47,9 @@ def focus_skill(prof):
     return k if rates[k] < 0.75 else None
 
 
-def record_session(name, book_title, source, score, answers, read_words=()):
+def record_session(name, book_title, source, score, answers, read_words=(), lang="en"):
     """score: /api/score result; answers: [{kind, verdict}]. Returns the updated profile and what changed."""
-    prof = load(name)
+    prof = load(name, lang)
     acc, wcpm = score.get("accuracy", 0), score.get("wcpm", 0)
     right = sum(a["verdict"] == "correct" for a in answers)
     comp = right / len(answers) if answers else 0
@@ -80,15 +84,25 @@ def record_session(name, book_title, source, score, answers, read_words=()):
                   "new_practice": [w for w in sorted(missed)]}
 
 
-def check_story(text, level, practice_words):
-    """Code check that a generated story fits its level and really uses the practice words."""
-    spec = LEVELS[level]
-    words = text.split()
-    sents = [s for s in re.split(r"[.!?]+", text) if s.strip()]
-    longest = max((len(s.split()) for s in sents), default=0)
-    norm_text = " " + re.sub(r"[^a-z' ]", " ", text.lower()) + " "
-    used = [w for w in practice_words if re.search(rf"\b{re.escape(w.lower())}", norm_text)]
+def spec_for(level, lang="en"):
+    """Level spec in the language's unit: words, or Han characters for Chinese (about 1.6 per English word)."""
+    s = LEVELS[level]
+    if L.is_cjk(lang):
+        return {"words": (int(s["words"][0] * 1.6), int(s["words"][1] * 1.6)), "max_sentence": int(s["max_sentence"] * 1.8),
+                "unit": "characters", "label": s["label"]}
+    return {**s, "unit": "words"}
+
+
+def check_story(text, level, practice_words, lang="en"):
+    """Code check that a generated story fits its level, is in the right language, and uses the practice words."""
+    spec = spec_for(level, lang)
+    n = L.length(text, lang)
+    longest = max((L.length(s, lang) for s in L.sentences(text, lang)), default=0)
+    toks = [L.norm(t) for t in L.tokens(text, lang)]
+    joined = "".join(toks) if L.is_cjk(lang) else " " + " ".join(toks) + " "
+    used = [w for w in practice_words if (L.norm(w) in joined if L.is_cjk(lang) else f" {L.norm(w)}" in joined)]
     lo, hi = spec["words"]
-    return {"word_count": len(words), "target_words": [lo, hi], "word_count_ok": lo * 0.85 <= len(words) <= hi * 1.15,
+    return {"word_count": n, "unit": spec["unit"], "target_words": [lo, hi], "word_count_ok": lo * 0.85 <= n <= hi * 1.15,
             "longest_sentence": longest, "sentence_ok": longest <= spec["max_sentence"] + 2,
+            "language_ok": L.detect_script_ok(text, lang),
             "practice_used": used, "practice_missing": [w for w in practice_words if w not in used]}

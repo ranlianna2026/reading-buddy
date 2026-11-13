@@ -159,6 +159,10 @@
   .passage .misread { background:#ffe7c7; border-bottom:3px solid var(--warn); }
   .passage .reached { background:#dcf6ea; }
   .passage span.speaking { background:#ffe58a; box-shadow:0 0 0 3px #ffe58a; }
+  .langbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:4px 0 12px; font-weight:800; color:var(--muted); font-size:14px; }
+  .langbar button { font-size:15px; padding:7px 14px; border-radius:20px; background:#fff; color:var(--ink); border:2px solid #efe3c9; box-shadow:0 3px 0 #efe3c9; }
+  .langbar button.on { background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:0 3px 0 #4b3fc4; }
+  .flag { font-size:18px; margin-left:6px; }
   .writing { text-align:center; padding:60px 20px; }
   .writing .pen { font-size:64px; animation: bob .6s infinite alternate; }
   .writing .wstep { font-family:"Fredoka"; font-size:24px; font-weight:600; margin:18px 0; min-height:34px; animation: fade .4s; }
@@ -225,6 +229,7 @@
   <section class="card">
     <div class="buddy" id="buddy"><div class="face">🦉</div><div class="bubble" id="say">Hi! I'm Buddy 🦉 Do you want to <b>read a book</b>, or <b>make your own story</b>?</div></div>
     <div class="heard" id="heard"></div>
+    <div class="langbar" id="langbar"></div>
     <div id="chooser" class="choices">
       <div class="choice">
         <h3>📖 Read a book</h3>
@@ -235,9 +240,7 @@
           <button class="ghost small" id="go">Find</button>
         </div>
         <div class="row picks">
-          <button class="ghost small" data-book="The Velveteen Rabbit">🐰 Velveteen Rabbit</button>
-          <button class="ghost small" data-book="The Tale of Peter Rabbit">🥕 Peter Rabbit</button>
-          <button class="ghost small" data-book="The Fox and the Grapes">🦊 Fox &amp; Grapes</button>
+          <span id="quick" style="display:contents"></span>
           <label class="ghost small lbl">📷 Page photo<input type="file" id="photo" accept="image/*" hidden></label>
         </div>
       </div>
@@ -280,7 +283,7 @@
     <div id="prog" style="color:var(--muted)">…</div>
     <h2>This reading</h2>
     <div class="stats">
-      <div class="stat"><b id="wcpm">–</b><small>words / min</small></div>
+      <div class="stat"><b id="wcpm">–</b><small id="wcpmlabel">words / min</small></div>
       <div class="stat"><b id="acc">–</b><small>accuracy</small></div>
       <div class="stat"><b id="comp">–</b><small>understood</small></div>
     </div>
@@ -294,13 +297,25 @@
   <div class="qcard" id="qcard"></div>
 </div>
 <footer>Built with Meta Muse Spark (reading, questions, stories) · Muse Image (pictures) · Keenable (books &amp; facts) · speech runs in your browser · books from Project Gutenberg (public domain)</footer>
+<script src="/static/i18n.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const S = { book:null, qsPromise:null, questions:[], score:null, results:[], learnTopic:"", storyImgs:[], storyFiles:[], idea:"" };
 const LEARNER = () => ($("#learner").value.trim() || "Reader");
+S.lang = localStorage.getItem("rb_lang") || "en";
+const BL = () => (S.book && S.book.lang) || S.lang;                      // language of the open book
+const CJK = () => LANGS[BL()].cjk, SEP = () => (CJK() ? "" : " ");
+const toks = t => (CJK() ? (t.match(/[\u3400-\u9fff\uf900-\ufaff]|[^\s\u3400-\u9fff\uf900-\ufaff]+/g) || []) : t.split(/\s+/).filter(Boolean));
+const UNIT = () => (CJK() ? "characters" : "words");
+function renderLangs(){
+  $("#langbar").innerHTML = "🌐 Story language: " + Object.entries(LANGS).map(([k, v]) => `<button data-lang="${k}" class="${k === S.lang ? "on" : ""}">${v.label}</button>`).join("");
+  document.querySelectorAll("#langbar button").forEach(b => b.onclick = () => { S.lang = b.dataset.lang; localStorage.setItem("rb_lang", S.lang); renderLangs(); loadProfile(); });
+  $("#quick").innerHTML = (QUICK[S.lang] || []).map(([label, title]) => `<button class="ghost small" data-book="${title}">${label}</button>`).join("");
+  document.querySelectorAll("[data-book]").forEach(b => b.onclick = () => loadBook(b.dataset.book));
+}
 $("#learner").value = localStorage.getItem("rb_learner") || "Mia";
 $("#learner").onchange = () => { localStorage.setItem("rb_learner", LEARNER()); loadProfile(); };
-async function loadProfile(){ renderProfile(await fetch("/api/profile/" + encodeURIComponent(LEARNER())).then(r => r.json())); }
+async function loadProfile(){ renderProfile(await fetch("/api/profile/" + encodeURIComponent(LEARNER()) + "?lang=" + S.lang).then(r => r.json())); }
 function sparkline(vals){
   if (vals.length < 2) return "";
   const w = 300, h = 46, mx = Math.max(...vals) * 1.1 || 1, step = w / (vals.length - 1);
@@ -318,19 +333,22 @@ function renderProfile(p){
     <div style="font-size:13px;margin-top:4px">Practicing: ${p.practice.length ? p.practice.map(w => `<b style="color:#8a4b00">${w}</b>`).join(", ") : "–"}${p.mastered.length ? ` · mastered ⭐ ${p.mastered.length}` : ""}</div>`;
 }
 loadProfile().then(() => { if (S.profile.history.length) $("#say").innerHTML = `Welcome back, ${LEARNER()}! 🌟 Want to <b>read a book</b>, or <b>make your own story</b>?`; });
-const post = (url, body) => fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)})
+const post = (url, body) => fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ lang: BL(), ...body })})
   .then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.statusText); return j; });
 
 // ---------- voice out ----------
-let VOICE = null;
+let VOICE = null; const VOICES = {};
 function pickVoice(){ const vs = speechSynthesis.getVoices();
-  VOICE = vs.find(v => /Samantha|Google US English|Ava|Allison/i.test(v.name) && v.lang.startsWith("en")) || vs.find(v=>v.lang==="en-US") || null; }
+  for (const [k, L] of Object.entries(LANGS)) { const code = L.speech.slice(0, 2);
+    VOICES[k] = vs.find(v => L.voices.test(v.name) && v.lang.startsWith(code)) || vs.find(v => v.lang === L.speech) || vs.find(v => v.lang.startsWith(code)) || null; }
+  VOICE = VOICES.en; }
 speechSynthesis.onvoiceschanged = pickVoice; pickVoice();
-function say(text, show=true){
+function say(text, show=true, lang="en"){
   if (show) $(S.sayTarget || "#say").innerHTML = text;
   return new Promise(res => {
     const plain = text.replace(/<[^>]+>/g, "");
-    const u = new SpeechSynthesisUtterance(plain); if (VOICE) u.voice = VOICE; u.rate = 0.95; u.pitch = 1.1;
+    const u = new SpeechSynthesisUtterance(plain); const v = VOICES[lang] || VOICE; if (v) u.voice = v; u.lang = LANGS[lang]?.speech || "en-US";
+    u.rate = 0.95; u.pitch = 1.1;
     $("#buddy").classList.add("talking");
     u.onend = u.onerror = () => { $("#buddy").classList.remove("talking"); res(); };
     speechSynthesis.cancel(); speechSynthesis.speak(u);
@@ -339,10 +357,10 @@ function say(text, show=true){
 
 // ---------- voice in (Chrome Web Speech API) ----------
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-function listenOnce(timeoutMs=9000){
+function listenOnce(timeoutMs=9000, lang=null){
   return new Promise(res => {
     if (!SR) return res(prompt("Type your answer:") || "");
-    const r = new SR(); r.lang = "en-US"; r.interimResults = true; r.continuous = false;
+    const r = new SR(); r.lang = LANGS[lang || BL()].speech; r.interimResults = true; r.continuous = false;
     let final = "", done = false; const finish = () => { if (!done) { done = true; S.abortListen = null; try{r.stop()}catch{}; res(final.trim()); } };
     S.abortListen = finish; const out = $(S.heardTarget || "#heard");
     r.onresult = e => { let interim = ""; for (const x of e.results) (x.isFinal ? final = x[0].transcript : interim = x[0].transcript);
@@ -356,7 +374,7 @@ function listenOnce(timeoutMs=9000){
 let reader = null;
 function startReading(onUpdate){
   const st = { text:"", interim:"", on:true, t0:performance.now() };
-  const r = new SR(); r.lang = "en-US"; r.interimResults = true; r.continuous = true;
+  const r = new SR(); r.lang = LANGS[BL()].speech; r.interimResults = true; r.continuous = true;
   r.onresult = e => { let fin = "", interim = "";
     for (let i = 0; i < e.results.length; i++) (e.results[i].isFinal ? fin += e.results[i][0].transcript + " " : interim += e.results[i][0].transcript);
     st.cur = fin; st.interim = interim; onUpdate((st.text + " " + fin + " " + interim).trim()); };
@@ -370,15 +388,15 @@ function stopReading(){ const {st, r} = reader; st.on = false; try { r.stop(); }
 function pageTexts(b){
   if (b.pages && b.pages.length) return b.pages.map(p => p.text.trim());
   const sents = b.text.match(/[^.!?]+[.!?]+["”’']?|[^.!?]+$/g) || [b.text], out = []; let cur = "";
-  for (const x of sents) { cur += x; if (cur.split(/\s+/).filter(Boolean).length >= 35) { out.push(cur.trim()); cur = ""; } }
+  for (const x of sents) { cur += x; if (toks(cur).length >= (CJK() ? 60 : 35)) { out.push(cur.trim()); cur = ""; } }
   if (cur.trim()) out.push(cur.trim());
   return out;
 }
 function renderPassage(){
   const b = S.book, texts = pageTexts(b); let gi = 0;
   S.pages = texts.map((t, pi) => {
-    const ws = t.split(/\s+/).filter(Boolean), start = gi; gi += ws.length;
-    const html = ws.map((w, k) => `<span data-i="${start + k}">${w.replace(/</g,"&lt;")}</span>`).join(" ");
+    const ws = toks(t), start = gi; gi += ws.length;
+    const html = ws.map((w, k) => `<span data-i="${start + k}">${w.replace(/</g,"&lt;")}</span>`).join(SEP());
     const ii = b.pages && b.pages[pi] ? b.pages[pi].image_index : -1;
     const img = b.via === "story" ? (S.storyImgs[ii] || S.storyImgs[pi % Math.max(1, S.storyImgs.length)] || "")
               : b.via === "muse-vision" ? (S.photoUrl || "")
@@ -397,60 +415,68 @@ function showPage(n){
   document.querySelectorAll("#passage .pg").forEach(d => d.hidden = +d.dataset.p !== n);
   document.querySelectorAll("#dots span").forEach(d => d.classList.toggle("on", +d.dataset.p === n));
   const pg = S.pages[n], img = pg.gen || pg.img;
-  const drawnFromIdea = S.book.via === "story" && !S.storyImgs.length;
-  const label = drawnFromIdea ? "✨ drawn by Buddy from your idea" : S.book.via === "story" ? "✨ new picture · in your drawing style" : "✨ new picture · in the original style";
+  const drawnFromIdea = (S.book.via === "story" && !S.storyImgs.length) || (S.book.via !== "story" && S.book.via !== "muse-vision" && !S.pages.some(p => p.img));
+  const label = drawnFromIdea ? (S.book.via === "story" ? "✨ drawn by Buddy from your idea" : "✨ drawn by Buddy") : S.book.via === "story" ? "✨ new picture · in your drawing style" : "✨ new picture · in the original style";
   $("#pagepic").innerHTML = img ? `<img src="${img}" alt="">` + (pg.gen ? `<span class="badge">${label}</span>` : "")
                          : pg.pending ? `<div class="ph">🎨</div>` : "";
   $("#pagepic").classList.toggle("drawing", !!pg.pending);
   $("#prev").disabled = n === 0; $("#next").disabled = n === S.pages.length - 1;
   const page = $(".page"); page.style.animation = "none"; page.offsetHeight; page.style.animation = "";
 }
+// picture requests: time limit + one retry, so a slow or dropped request can never leave a page "drawing" forever
+async function drawPicture(body, tries = 2){
+  for (let t = 0; t < tries; t++) {
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 60000);
+    try {
+      const r = await fetch("/api/illustrate", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body), signal: ctl.signal });
+      if (r.ok) return (await r.json()).image;
+    } catch (e) { /* timeout or dropped connection: retry */ }
+    finally { clearTimeout(timer); }
+  }
+  return null;
+}
 // Muse Image: pages that would repeat a picture (or have none) get a new one drawn from the original picture
 async function planPictures(){
   const b = S.book, token = S.bookToken = Math.random(); let prev = null, ref = null;
   const todo = [];
   const cast = b.plan ? `${b.plan.characters}. Setting: ${b.plan.setting}` : "";
-  if (b.via === "story" && !S.storyImgs.length) {
+  const noPictures = b.via !== "story" && b.via !== "muse-vision" && !S.pages.some(p => p.img);
+  if ((b.via === "story" && !S.storyImgs.length) || noPictures) {
     // told only by voice/text: draw page 1 from scratch, then use it as the reference for every other page
     S.pages.forEach(p => p.pending = true); showPage(S.page);
-    try {
-      const first = await post("/api/illustrate", { page_text: S.pages[0].text, title: b.title, kind: "new", cast });
-      if (S.bookToken !== token) return;
-      S.pages[0].gen = first.image; S.pages[0].pending = false; showPage(S.page);
-      S.pages.forEach((p, i) => { if (i > 0) { p.ref = first.image; todo.push(p); } });
-    } catch (e) { S.pages.forEach(p => p.pending = false); showPage(S.page); return; }
+    const first = await drawPicture({ page_text: S.pages[0].text, title: b.title, kind: "new", cast });
+    if (S.bookToken !== token) return;
+    if (!first) { S.pages.forEach(p => p.pending = false); showPage(S.page); return; }
+    S.pages[0].gen = first; S.pages[0].pending = false; showPage(S.page);
+    S.pages.forEach((p, i) => { if (i > 0) { p.ref = first; todo.push(p); } });
   } else S.pages.forEach((p, i) => {
     ref = p.img || ref;
     const story = b.via === "story";
     if (ref && (story ? i > 0 : (!p.img || p.img === prev))) { p.pending = true; p.ref = ref; todo.push(p); }
     prev = p.img || prev;
   });
-  for (let k = 0; k < todo.length; k += 2) {                       // two at a time
-    await Promise.all(todo.slice(k, k + 2).map(async p => {
-      try {
-        const kind = b.via !== "story" ? "book" : S.storyImgs.length ? "story" : "series";
-        const r = await post("/api/illustrate", { page_text: p.text, ref_image: p.ref, title: b.title, kind, cast });
-        if (S.bookToken === token) p.gen = r.image;
-      } catch (e) { /* keep the original picture */ }
-      p.pending = false;
-      if (S.bookToken === token && S.pages.indexOf(p) === S.page) showPage(S.page);
-    }));
-  }
+  const kind = noPictures ? "series" : b.via !== "story" ? "book" : S.storyImgs.length ? "story" : "series";
+  await Promise.all(todo.map(async p => {                           // all pages at once (well under the rate limit)
+    const img = await drawPicture({ page_text: p.text, ref_image: p.ref, title: b.title, kind, cast });
+    if (S.bookToken === token && img) p.gen = img;
+    p.pending = false;                                              // success or not, never leave a page "drawing"
+    if (S.bookToken === token && S.pages.indexOf(p) === S.page) showPage(S.page);
+  }));
 }
 const pageOf = i => S.pages.findIndex(p => i >= p.start && i < p.end);
 $("#prev").onclick = () => { stopListen(); showPage(S.page - 1); };
 $("#next").onclick = () => { stopListen(); showPage(S.page + 1); };
-const norm = w => w.toLowerCase().replace(/[^a-z0-9']/g,"");
+const norm = w => w.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}']/gu, "");
 function markReached(heard){       // live progress: greedy forward match of heard words; turn the page when the child gets there
   const spans = [...document.querySelectorAll("#passage span")], ref = spans.map(s => norm(s.textContent));
-  let i = 0; for (const h of heard.split(/\s+/).map(norm).filter(Boolean)) {
+  let i = 0; for (const h of toks(heard).map(norm).filter(Boolean)) {
     for (let k = i; k < Math.min(i + 4, ref.length); k++) if (ref[k] === h) { i = k + 1; break; } }
   spans.forEach((s, k) => s.classList.toggle("reached", k < i));
   const p = pageOf(Math.min(i, spans.length - 1)); if (p > S.page) showPage(p);
 }
 function highlightQuote(quote){
   document.querySelectorAll("#passage .quote").forEach(s => s.classList.remove("quote"));
-  if (!quote) return; const q = quote.split(/\s+/).map(norm).filter(Boolean);
+  if (!quote) return; const q = toks(quote).map(norm).filter(Boolean);
   const spans = [...document.querySelectorAll("#passage span")], ref = spans.map(s => norm(s.textContent));
   for (let i = 0; i < ref.length; i++) { let j = 0, k = i;
     while (k < ref.length && j < q.length) { if (!ref[k]) { k++; continue; } if (ref[k] !== q[j]) break; j++; k++; }
@@ -465,8 +491,8 @@ function readPage(n){
   return new Promise(res => {
     const spans = [...document.querySelectorAll(`#passage .pg[data-p="${n}"] span`)];
     const words = spans.map(s => s.textContent), starts = []; let pos = 0;
-    words.forEach(w => { starts.push(pos); pos += w.length + 1; });
-    const u = new SpeechSynthesisUtterance(words.join(" ")); if (VOICE) u.voice = VOICE; u.rate = 0.85; u.pitch = 1.1;
+    words.forEach(w => { starts.push(pos); pos += w.length + SEP().length; });
+    const u = new SpeechSynthesisUtterance(words.join(SEP())); const v = VOICES[BL()] || VOICE; if (v) u.voice = v; u.lang = LANGS[BL()].speech; u.rate = 0.85; u.pitch = 1.1;
     u.onboundary = e => { if (e.name && e.name !== "word") return; let k = 0; while (k + 1 < starts.length && starts[k + 1] <= e.charIndex) k++;
       spans.forEach((s, x) => s.classList.toggle("speaking", x === k)); };
     u.onend = u.onerror = () => { spans.forEach(s => s.classList.remove("speaking")); res(); };
@@ -480,7 +506,7 @@ $("#listen").onclick = async () => {
   for (let n = S.page; listening && n < S.pages.length; n++) { showPage(n); await readPage(n); if (listening && n < S.pages.length - 1) await new Promise(r => setTimeout(r, 500)); }
   stopListen();
 };
-$("#newstory").onclick = () => { stopListen(); if (reader && reader.st.on) stopReading(); $("#book").hidden = true; $("#chooser").hidden = false;
+$("#newstory").onclick = () => { stopListen(); if (reader && reader.st.on) stopReading(); $("#book").hidden = true; $("#chooser").hidden = false; $("#langbar").hidden = false;
   $("#loading").innerHTML = ""; $("#controls").innerHTML = "";
   say("What would you like to read next?"); };
 
@@ -488,14 +514,14 @@ $("#newstory").onclick = () => { stopListen(); if (reader && reader.st.on) stopR
 async function loadBook(title){
   $("#loading").innerHTML = `<span class="spinner"></span> Finding <b>${title}</b>…`;
   say(`Great choice! Let me find ${title}.`);
-  try { S.book = await post("/api/book", { title }); }
+  try { S.book = await post("/api/book", { title, lang: S.lang }); }
   catch (e) { $("#loading").textContent = ""; return say(`Hmm, I couldn't find that one. Try another book?`); }
   showBook();
 }
 function showBook(){
   const b = S.book; stopListen();
-  $("#loading").innerHTML = ""; $("#chooser").hidden = true; $("#book").hidden = false;
-  $("#booktitle").innerHTML = `<b>${b.title}</b> ${b.parts > 1 ? `· part ${b.part + 1} of ${b.parts}` : ""}`;
+  $("#loading").innerHTML = ""; $("#chooser").hidden = true; $("#langbar").hidden = true; $("#book").hidden = false;
+  $("#booktitle").innerHTML = `<b>${b.title}</b><span class="flag" title="${LANGS[BL()].label}">${LANGS[BL()].label.split(" ")[0]}</span> ${b.parts > 1 ? `· part ${b.part + 1} of ${b.parts}` : ""}`;
   $("#src").innerHTML = b.via === "keenable" ? `Found with Keenable on <a href="${b.source}" target="_blank">Project Gutenberg</a> · ${Math.round(b.match*100)}% match to the book${b.pictures ? " · original illustrations" : ""}`
                        : b.via === "muse-vision" ? "Read from your photo by Muse Spark" : `Source: <a href="${b.source}" target="_blank">Project Gutenberg</a>`;
   if (b.via === "story") {
@@ -527,12 +553,12 @@ async function finishReading(){
   document.querySelectorAll("#passage span").forEach((el, i) => { el.classList.remove("reached");
     const st = s.status[i]; if (st === "misread" || st === "skipped") { el.classList.add(st);
       const m = s.miscues.find(m => m.index === i); el.title = m && m.said ? `you said "${m.said}"` : "skipped"; } });
-  $("#wcpm").textContent = s.wcpm; $("#acc").textContent = Math.round(s.accuracy * 100) + "%";
+  $("#wcpm").textContent = s.wcpm; $("#acc").textContent = Math.round(s.accuracy * 100) + "%"; $("#wcpmlabel").textContent = UNIT() + " / min";
   $("#practice").innerHTML = s.practice_words.length ? s.practice_words.map(w => `<span title="hear it">${w} 🔊</span>`).join("")
                                                     : `<span style="background:var(--good-soft);color:var(--good)">none, great job! ⭐</span>`;
-  document.querySelectorAll("#practice span").forEach(el => el.onclick = () => say(el.textContent.replace(" 🔊",""), false));
+  document.querySelectorAll("#practice span").forEach(el => el.onclick = () => say(el.textContent.replace(" 🔊",""), false, BL()));
   const praise = s.accuracy >= 0.95 ? "Wow, super smooth reading!" : s.accuracy >= 0.85 ? "Nice reading!" : "Good effort! Reading out loud takes practice.";
-  await say(`${praise} You read <b>${s.words_correct} words</b> correctly, about <b>${s.wcpm} words a minute</b>.`
+  await say(`${praise} You read <b>${s.words_correct} ${UNIT()}</b> correctly, about <b>${s.wcpm} ${UNIT()} a minute</b>.`
             + (s.practice_words.length ? ` Let's practice <b>${s.practice_words.slice(0,3).join(", ")}</b> later.` : ""));
   await say("Now let's talk about the story!");
   askQuestions();
@@ -543,12 +569,12 @@ function burst(){ const b = document.createElement("div"); b.className = "burst"
   $("#qcard").appendChild(b); setTimeout(() => b.remove(), 1100); }
 function proofHTML(quote){                          // the supporting sentence, shown with its page picture
   if (!quote) return "";
-  const q = quote.split(/\s+/).map(norm).filter(Boolean), spans = [...document.querySelectorAll("#passage span")], ref = spans.map(x => norm(x.textContent));
+  const q = toks(quote).map(norm).filter(Boolean), spans = [...document.querySelectorAll("#passage span")], ref = spans.map(x => norm(x.textContent));
   for (let i = 0; i < ref.length; i++) { let j = 0, k = i;
     while (k < ref.length && j < q.length) { if (!ref[k]) { k++; continue; } if (ref[k] !== q[j]) break; j++; k++; }
     if (j === q.length) {
       const pg = S.pages[pageOf(i)], a = Math.max(pg.start, i - 8), z = Math.min(pg.end, k + 8);
-      const words = spans.slice(a, z).map((x, n) => (a + n >= i && a + n < k) ? `<mark>${x.textContent}</mark>` : x.textContent).join(" ");
+      const words = spans.slice(a, z).map((x, n) => (a + n >= i && a + n < k) ? `<mark>${x.textContent}</mark>` : x.textContent).join(SEP());
       const img = pg.gen || pg.img;
       return `<div class="proof">${img ? `<img src="${img}">` : ""}<div class="t"><small>📖 From the story · page ${pageOf(i) + 1}</small>${a > pg.start ? "…" : ""}${words}${z < pg.end ? "…" : ""}</div></div>`;
     } }
@@ -566,17 +592,20 @@ function quizCard(i, n, q){
     <div class="qsay" id="qsaybox" hidden><span class="em" id="qem">🦉</span><span id="qsay"></span></div>
     <div id="qproof"></div>
     <div class="qactions"><button class="ghost small" id="qagain">🔁 Hear it again</button><button class="ghost small" id="qskip">Skip ›</button></div>`;
-  $("#qagain").onclick = () => { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(q.question); if (VOICE) u.voice = VOICE; u.rate = .95; speechSynthesis.speak(u); };
+  $("#qagain").onclick = () => { speechSynthesis.cancel(); say(q.question, false, BL()); };
   $("#qskip").onclick = () => { S.skipQ = true; speechSynthesis.cancel(); S.abortListen && S.abortListen(); };
 }
 function pickByVoice(said, q){
-  const t = " " + said.toLowerCase().replace(/[^a-z0-9 ]/g, " ") + " ";
+  const t = " " + said.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N} ]/gu, " ") + " ";
   const ord = [/\b(a|first|one|1)\b/, /\b(b|second|two|2)\b/, /\b(c|third|three|3)\b/];
   let best = -1, score = 0;
-  q.choices.forEach((c, k) => { const ws = c.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 2);
-    const hit = ws.filter(w => t.includes(" " + w)).length / Math.max(1, ws.length); if (hit > score) { score = hit; best = k; } });
+  q.choices.forEach((c, k) => {
+    const cn = c.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N} ]/gu, " ");
+    const ws = CJK() ? [...cn.replace(/\s/g, "")] : cn.split(/\s+/).filter(w => w.length > 2);
+    const hit = ws.filter(w => CJK() ? t.includes(w) : t.includes(" " + w)).length / Math.max(1, ws.length); if (hit > score) { score = hit; best = k; } });
   if (score >= 0.5) return best;
-  if (/\bsecond\b/.test(t)) return 1; if (/\bthird\b|\blast\b/.test(t)) return 2; if (/\bfirst\b/.test(t)) return 0;
+  if (/\b(second|segunda?|deuxieme|seconde)\b|第二/.test(t)) return 1; if (/\b(third|last|tercera?|ultima?|troisieme|derniere?)\b|第三|最后/.test(t)) return 2;
+  if (/\b(first|primera?|premiere?)\b|第一/.test(t)) return 0;
   const tok = t.trim().split(/\s+/); if (tok.length <= 2) { const k = ord.findIndex(r => r.test(tok[tok.length - 1])); if (k >= 0) return k; }
   return -1;
 }
@@ -601,7 +630,8 @@ async function askQuestions(){
     S.sayTarget = "#qsay"; S.heardTarget = "#qheard";
     let verdict = "not_yet", action = "hint_retry";
     for (let attempt = 1; attempt <= 2 && !S.skipQ; attempt++) {
-      await say(attempt === 1 ? q.question : "Let's try again. " + q.question, false);
+      if (attempt > 1) await say("Let's try again.", false);
+      await say(q.question, false, BL());
       if (S.skipQ) break;
       if (q.format === "choice") {                    // single choice: graded instantly by code
         const k = await choose(q); $("#qmiclabel").textContent = "";
@@ -615,7 +645,7 @@ async function askQuestions(){
         btn.classList.add("wrong");
         if (attempt === 1) { buddySays("", "reread"); $("#qproof").innerHTML = proofHTML(q.quote); await say("Not quite. Let's look at the story again, then pick another one."); continue; }
         document.querySelector(`.opt[data-k="${q.answer_index}"]`).classList.add("right"); buddySays("", "miss");
-        await say(`The answer is: ${q.choices[q.answer_index]}. You'll get it next time!`); await new Promise(r => setTimeout(r, 900)); break;
+        await say("The answer is:"); await say(q.choices[q.answer_index], true, BL()); await say("You'll get it next time!"); await new Promise(r => setTimeout(r, 900)); break;
       }
       $("#qmiclabel").textContent = "I'm listening… say your answer!";
       const answer = await listenOnce();
@@ -626,10 +656,11 @@ async function askQuestions(){
       const g = await post("/api/grade", { passage: S.book.text, question: q, answer, attempt });
       verdict = g.verdict; action = g.next_action;
       // the tutor's next move (chosen by Muse, bounded by code): praise / hint / re-read together / explain
-      if (action === "praise_move_on") { buddySays("", "correct"); burst(); $("#qproof").innerHTML = proofHTML(g.quote); await say(g.feedback); }
-      else if (action === "reread_retry") { buddySays("", "reread"); $("#qproof").innerHTML = proofHTML(g.quote); await say(g.feedback + " Let's read this part again together."); if (g.quote) await say(g.quote); }
-      else if (action === "hint_retry") { buddySays("", "miss"); $("#qproof").innerHTML = ""; await say(g.feedback + (g.hint ? " " + g.hint : "")); }
-      else { buddySays("", "miss"); $("#qproof").innerHTML = proofHTML(g.quote); await say(g.feedback); }
+      const L = BL();
+      if (action === "praise_move_on") { buddySays("", "correct"); burst(); $("#qproof").innerHTML = proofHTML(g.quote); await say(g.feedback, true, L); }
+      else if (action === "reread_retry") { buddySays("", "reread"); $("#qproof").innerHTML = proofHTML(g.quote); await say(g.feedback, true, L); if (g.quote) await say(g.quote, false, L); }
+      else if (action === "hint_retry") { buddySays("", "miss"); $("#qproof").innerHTML = ""; await say(g.feedback + (g.hint ? " " + g.hint : ""), true, L); }
+      else { buddySays("", "miss"); $("#qproof").innerHTML = proofHTML(g.quote); await say(g.feedback, true, L); }
       if (action === "praise_move_on" || action === "explain_move_on") { await new Promise(r => setTimeout(r, 900)); break; }
       $("#qheard").textContent = ""; $("#qheard").classList.remove("has");
     }
@@ -650,7 +681,7 @@ async function reportCard(right, n, learn, sess){
   $("#qcard").innerHTML = `
     <div class="rhead"><div class="stars">${"⭐".repeat(right)}${"☆".repeat(n - right)}</div><h2>${head}</h2>
       <div style="color:var(--muted);font-weight:700">${S.book.title}</div></div>
-    <div class="rstats"><div><b>${s.wcpm}</b><small>words / minute</small></div><div><b>${Math.round(s.accuracy * 100)}%</b><small>read correctly</small></div><div><b>${right}/${n}</b><small>questions understood</small></div></div>
+    <div class="rstats"><div><b>${s.wcpm}</b><small>${UNIT()} / minute</small></div><div><b>${Math.round(s.accuracy * 100)}%</b><small>read correctly</small></div><div><b>${right}/${n}</b><small>questions understood</small></div></div>
     <div class="change">${up ? "🎉 <b>Level up!</b> " : down ? "🌱 " : "👍 "}Level ${ch.level_from} → ${ch.level_to}: ${ch.why}.${ch.mastered.length ? `<br>⭐ Mastered: <b>${ch.mastered.join(", ")}</b>` : ""}</div>
     ${practice.length ? `<div class="rrow">📝 Words to practice (tap to hear): <span class="chips">${practice.map(w => `<span>${w} 🔊</span>`).join("")}</span><br><small style="color:var(--muted)">Your next story will use them!</small></div>` : ""}
     ${learn ? `<div class="rrow"><div class="learn">🌍 <b>Fun fact about ${learn.topic}:</b> ${learn.fact}<br><a href="${learn.source_url}" target="_blank">source: ${learn.source_title}</a></div></div>` : ""}
@@ -658,37 +689,37 @@ async function reportCard(right, n, learn, sess){
       ${next ? `<button class="ghost" id="nextbtn">Read the next part ➡️</button>` : ""}<button class="ghost" id="againbtn">🔁 Read it again</button>
       <button class="ghost" id="closerep">Close</button></div>`;
   if (right === n) burst();
-  document.querySelectorAll(".rrow .chips span").forEach(el => el.onclick = () => say(el.textContent.replace(" 🔊",""), false));
+  document.querySelectorAll(".rrow .chips span").forEach(el => el.onclick = () => say(el.textContent.replace(" 🔊",""), false, BL()));
   const close = () => { $("#quiz").hidden = true; speechSynthesis.cancel(); };
   $("#nextstory").onclick = () => { close(); makeStory(true); };
   if (next) $("#nextbtn").onclick = async () => { close(); $("#controls").innerHTML = `<span class="spinner"></span>`;
-    S.book = await post("/api/book", { title: S.book.title, part: S.book.part + 1 }); showBook(); };
+    S.book = await post("/api/book", { title: S.book.title, part: S.book.part + 1, lang: BL() }); showBook(); };
   $("#againbtn").onclick = () => { close(); showBook(); };
   $("#closerep").onclick = () => { close(); $("#controls").innerHTML = `<button class="big" id="nextstory2">✨ Next story</button>`; $("#nextstory2").onclick = () => makeStory(true); };
-  await say(`${head} ${up ? `You moved up to level ${ch.level_to}! ` : ""}` + (learn ? `Here's a fun fact about ${learn.topic}: ${learn.fact}` : ""), false);
+  await say(`${head} ${up ? `You moved up to level ${ch.level_to}! ` : ""}`, false); if (learn) await say(learn.fact, false, BL());
 }
 
 // ---------- make my own story ----------
 const fileToUrl = f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); });
 $("#pics").onchange = async e => { S.storyFiles = [...e.target.files].slice(0, 4); S.storyImgs = await Promise.all(S.storyFiles.map(fileToUrl));
   $("#thumbs").innerHTML = S.storyImgs.map(u => `<img src="${u}">`).join(""); say("Ooh, I love your pictures!"); };
-$("#ideamic").onclick = async () => { await say("Tell me your story idea!"); const t = await listenOnce(15000); if (t) { $("#idea").value = t; say("Great idea!"); } };
+$("#ideamic").onclick = async () => { await say("Tell me your story idea!"); const t = await listenOnce(15000, S.lang); if (t) { $("#idea").value = t; say("Great idea!"); } };
 async function makeStory(sequel = false){
   let idea = $("#idea").value.trim();
   if (sequel && S.book) idea = `A new adventure that continues "${S.book.title}". ${S.idea || idea}`;
   if (!idea && !S.storyFiles.length) return say("Add a picture or tell me your idea first!");
   S.idea = S.idea || idea;
-  $("#book").hidden = true; $("#chooser").hidden = true;
+  $("#book").hidden = true; $("#chooser").hidden = true; $("#langbar").hidden = true;
   const pw = (S.profile && S.profile.practice.slice(0, 3)) || [];
   const steps = ["🎨 Looking at your idea…", "🦊 Imagining the characters…", `📏 Choosing words for ${S.profile ? S.profile.level_label.split("·")[0].trim() : "your level"}…`]
     .concat(pw.length ? [`📝 Using your practice words: ${pw.join(", ")}…`] : [], ["🌍 Finding true facts to add…", "✅ Checking every sentence…", "📖 Almost ready…"]);
   $("#loading").innerHTML = `<div class="writing"><div class="pen">🦉✍️</div><div class="wstep" id="wstep">${steps[0]}</div><div class="wbar"><i></i></div></div>`;
   let si = 0; const tick = setInterval(() => { si = Math.min(si + 1, steps.length - 1); const el = $("#wstep"); if (el) el.textContent = steps[si]; else clearInterval(tick); }, 3800);
   say(sequel ? "I'm writing your next story, with your practice words in it!" : "I'm writing a story just for you! This takes a few seconds.");
-  const fd = new FormData(); fd.append("idea", idea); fd.append("learner_name", LEARNER());
+  const fd = new FormData(); fd.append("idea", idea); fd.append("learner_name", LEARNER()); fd.append("lang", sequel ? BL() : S.lang);
   S.storyFiles.forEach(f => fd.append("files", f));
   const r = await fetch("/api/story", { method:"POST", body: fd }); const j = await r.json(); clearInterval(tick);
-  if (!r.ok) { $("#loading").textContent = ""; $("#chooser").hidden = false; return say(j.detail || "Oops, let's try again."); }
+  if (!r.ok) { $("#loading").textContent = ""; $("#chooser").hidden = false; $("#langbar").hidden = false; return say(j.detail || "Oops, let's try again."); }
   S.book = j; showBook();
 }
 $("#makestory").onclick = () => { S.idea = ""; makeStory(false); };
@@ -696,18 +727,18 @@ $("#makestory").onclick = () => { S.idea = ""; makeStory(false); };
 // ---------- entry points ----------
 $("#start").onclick = async () => {
   await say("Hi! I'm Buddy. What are you going to read today?");
-  const t = await listenOnce(8000);
+  const t = await listenOnce(8000, S.lang);
   if (t) loadBook(t.replace(/^(i'm going to read|i want to read|let's read|i'm reading)\s*/i, ""));
   else say("You can also tap a book or type a title!");
 };
 $("#go").onclick = () => $("#title").value.trim() && loadBook($("#title").value.trim());
 $("#title").onkeydown = e => e.key === "Enter" && $("#go").onclick();
-document.querySelectorAll("[data-book]").forEach(b => b.onclick = () => loadBook(b.dataset.book));
+renderLangs();
 $("#photo").onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   S.photoUrl = await fileToUrl(f); $("#loading").innerHTML = `<span class="spinner"></span> Reading your page…`; say("Ooh, let me look at your page!");
   const fd = new FormData(); fd.append("file", f);
-  const r = await fetch("/api/page_photo", { method:"POST", body: fd }); S.book = await r.json(); showBook();
+  const r = await fetch("/api/page_photo", { method:"POST", body: fd }); S.book = { ...(await r.json()), lang: S.lang }; showBook();
 };
 </script>
 </body>

@@ -7,8 +7,9 @@
 4. Code checks length, sentence length and that the practice words are really there; one retry with the
    failures fed back (same loop as a design fix: the model proposes, code verifies).
 """
+from . import lang as L
 from .books import ksearch
-from .learner import LEVELS, check_story
+from .learner import check_story, spec_for
 from .meta_api import chat_json
 
 PLAN = {"type": "object", "additionalProperties": False,
@@ -30,20 +31,25 @@ SYSTEM = ("You are a children's author who writes warm, funny, age-appropriate s
           "aloud. Stories are safe for young children: no violence, scary content or brand names.")
 
 
-def create_story(images, idea, level, practice_words=()):
-    spec = LEVELS[level]
+FACTS = {"en": "facts for kids", "es": "datos para niños", "fr": "pour les enfants", "zh": "儿童 知识"}
+
+
+def create_story(images, idea, level, practice_words=(), lang="en"):
+    spec = spec_for(level, lang)
+    lname = L.get(lang)["name"] + (" — Simplified characters only" if lang == "zh" else "")
     plan = chat_json(SYSTEM, f"A child made these pictures and said this idea out loud: \"{idea or '(no idea given)'}\". "
                      "Plan a story from them.", PLAN, "plan", images=images)
     facts = []
     if plan.get("real_world_topic") and plan.get("search_query"):
         try:
-            facts = ksearch(plan["search_query"] + " facts for kids", max_results=4, snippet_max_length=400)
+            facts = ksearch(plan["search_query"] + " " + FACTS.get(lang, FACTS["en"]), max_results=4, snippet_max_length=400)
         except Exception:
             facts = []
     fact_txt = "\n".join(f"[{i}] {f.snippet}" for i, f in enumerate(facts)) or "(none)"
     lo, hi = spec["words"]
-    ask = (f"Write the story.\nPlan: {plan}\nChild's idea: \"{idea}\"\n"
-           f"Reading level {level}: {lo}-{hi} words in total, every sentence at most {spec['max_sentence']} words, "
+    unit = spec["unit"]
+    ask = (f"Write the story in {lname} (title too).\nPlan: {plan}\nChild's idea: \"{idea}\"\n"
+           f"Reading level {level}: {lo}-{hi} {unit} in total, every sentence at most {spec['max_sentence']} {unit}, "
            "simple words a child at this level can decode, 2-4 short pages. Use the child's pictures for the pages.\n"
            + (f"Weave in each of these practice words naturally, at least once (any grammatical form is fine, e.g. "
               f"'whispered'; keep every sentence grammatical): {', '.join(practice_words)}.\n" if practice_words else "")
@@ -52,14 +58,15 @@ def create_story(images, idea, level, practice_words=()):
     for attempt in range(2):
         st = chat_json(SYSTEM, ask + feedback, STORY, "story", images=images)
         text = " ".join(p["text"].strip() for p in st["pages"])
-        check = check_story(text, level, list(practice_words))
-        if check["word_count_ok"] and check["sentence_ok"] and not check["practice_missing"]:
+        check = check_story(text, level, list(practice_words), lang)
+        if check["word_count_ok"] and check["sentence_ok"] and check["language_ok"] and not check["practice_missing"]:
             break
         feedback = ("\n\nYour last draft failed these checks, fix them: "
-                    + (f"it had {check['word_count']} words, needs {lo}-{hi}. " if not check["word_count_ok"] else "")
-                    + (f"its longest sentence had {check['longest_sentence']} words, max is {spec['max_sentence']}. " if not check["sentence_ok"] else "")
+                    + (f"it must be written in {lname}. " if not check["language_ok"] else "")
+                    + (f"it had {check['word_count']} {unit}, needs {lo}-{hi}. " if not check["word_count_ok"] else "")
+                    + (f"its longest sentence had {check['longest_sentence']} {unit}, max is {spec['max_sentence']}. " if not check["sentence_ok"] else "")
                     + (f"it is missing these practice words: {', '.join(check['practice_missing'])}." if check["practice_missing"] else ""))
     used = [facts[i] for i in st.get("facts_used", []) if 0 <= i < len(facts)]
     return {"title": st["title"], "text": text, "pages": st["pages"], "via": "story", "part": 0, "parts": 1,
-            "source": "story", "level": level, "check": check, "attempts": attempt + 1, "plan": plan,
+            "source": "story", "level": level, "check": check, "attempts": attempt + 1, "plan": plan, "lang": lang,
             "facts": [{"title": f.title, "url": f.url} for f in used]}

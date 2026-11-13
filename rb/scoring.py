@@ -2,21 +2,24 @@
 
 Outputs words-correct-per-minute (WCPM), accuracy and miscues, the standard oral-reading-fluency measures.
 Only the part the child actually reached is scored, so stopping early is not counted as errors.
+Works in any language; for Chinese each character is a token (characters correct per minute).
 """
 import re
 from difflib import SequenceMatcher
+
+from . import lang as L
 
 _NUM = {"0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five",
         "6": "six", "7": "seven", "8": "eight", "9": "nine", "10": "ten"}
 
 
-def words(text):
+def words(text, lang="en"):
     """Display tokens (keep punctuation) for the passage."""
-    return text.split()
+    return L.tokens(text, lang)
 
 
 def norm(tok):
-    t = re.sub(r"[^a-z0-9']", "", tok.lower().replace("’", "'")).strip("'")
+    t = L.norm(tok)
     return _NUM.get(t, t)
 
 
@@ -32,12 +35,12 @@ were what when where which who will with you your one two all any some very woul
 over under down off went came come here been them three four five six seven eight nine ten""".split())
 
 
-def score(passage, transcript, seconds):
-    disp = words(passage)
+def score(passage, transcript, seconds, lang="en"):
+    disp = words(passage, lang)
     ref = [norm(w) for w in disp]
     keep = [i for i, w in enumerate(ref) if w]          # skip pure-punctuation tokens
     ref_n = [ref[i] for i in keep]
-    hyp = [w for w in (norm(t) for t in transcript.split()) if w]
+    hyp = [w for w in (norm(t) for t in L.tokens(transcript, lang)) if w]
 
     status = ["unread"] * len(disp)                       # per display token
     miscues, inserted = [], []
@@ -90,6 +93,13 @@ def score(passage, transcript, seconds):
         "finished": reached >= len(ref_n) - 2,
         "miscues": miscues,
         "inserted_words": inserted[:20],
-        "practice_words": sorted({w for w in (m["expected"].strip(".,;:!?\"'()—–-“”‘’").lower() for m in miscues)
-                                  if len(w) > 3 and w not in SIGHT})[:8],
+        "practice_words": _practice(miscues, lang),
+        "lang": lang, "unit": "characters" if L.is_cjk(lang) else "words",
     }
+
+
+def _practice(miscues, lang):
+    ws = [norm(m["expected"]) for m in miscues]
+    if L.is_cjk(lang):
+        return sorted({w for w in ws if w})[:8]
+    return sorted({w for w in ws if len(w) > 3 and not (lang == "en" and w in SIGHT)})[:8]
