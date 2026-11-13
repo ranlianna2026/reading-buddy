@@ -20,12 +20,12 @@
     reader = { st: { text: w.join(" "), cur: "", interim: "", on: true, t0: performance.now() - seconds * 1000 }, r: { stop() {} } };
   };
   const answerPlan = qs => qs.flatMap(q => q.format === "choice"
-      ? (q === qs[0] ? [`tap:${(q.answer_index + 1) % 3}`, `tap:${q.answer_index}`]          // Q1: wrong tap, then right tap
+      ? (q === qs.find(x => x.format === "choice") ? [`tap:${(q.answer_index + 1) % 3}`, `tap:${q.answer_index}`]   // first choice Q: wrong tap, then right
                      : [q.choices[q.answer_index]])                                           // other choice Qs: say the answer
       : ["because she likes cake", q.expected_answer]);                                       // open Q: wrong, then right
 
   try {
-    localStorage.setItem("rb_learner", "E2E"); $("#learner").value = "E2E"; await loadProfile();
+    const RUN = "E2E-" + Date.now().toString(36); localStorage.setItem("rb_learner", RUN); $("#learner").value = RUN; await loadProfile();
     const lvl0 = S.profile.level, sessions0 = S.profile.history.length;
     ok("home: two choices shown", !$("#chooser").hidden && document.querySelectorAll(".choice").length === 2);
 
@@ -52,14 +52,16 @@
     ok("A9 reading scored, miscues marked", document.querySelectorAll("#passage .misread, #passage .skipped").length >= 2,
        `${S.score.wcpm} wpm, ${Math.round(S.score.accuracy * 100)}%`);
     ok("A10 quiz pop-up opens", await until(() => !$("#quiz").hidden, 30000));
-    ok("A11 3 questions, mixed formats", S.questions.length === 3 && S.questions.some(q => q.format === "choice") && S.questions.some(q => q.format === "open"),
+    const want = S.profile.level <= 2 ? ["choice", "choice", "choice"] : null;
+    ok("A11 3 questions, formats fit her level", S.questions.length === 3 && (want ? S.questions.every(q => q.format === "choice") : S.questions.some(q => q.format === "open")),
        S.questions.map(q => `${q.kind}:${q.format}`).join(", "));
     await until(() => document.querySelector(".opt.wrong"), 20000);
     ok("A12 wrong tap greyed out + proof shown", !!document.querySelector(".opt.wrong") && await until(() => $("#qproof")?.innerHTML.includes("From the story"), 8000));
     ok("A13 right tap turns green", await until(() => document.querySelector(".opt.right"), 15000));
     ok("A14 report card appears", await until(() => $("#qcard")?.innerText.includes("words / minute"), 120000));
     ok("A15 all questions answered", S.answers.length === 3, S.answers.map(a => `${a.kind}:${a.verdict}`).join(", "));
-    ok("A16 open question retried then correct", S.answers.find(a => a.kind === "inference")?.verdict === "correct");
+    ok("A16 inference answered correctly", S.answers.find(a => a.kind === "inference")?.verdict === "correct");
+    ok("A16b level-2 reader gets tap questions", S.questions.every(q => q.format === "choice"), S.questions.map(q => q.format).join(","));
     ok("A17 session saved to profile", S.profile.history.length === sessions0 + 1, `level ${lvl0} → ${S.profile.level}`);
     ok("A18 fun fact with source on report", !!$("#qcard .learn a"), $("#qcard .learn a")?.href);
     $("#closerep").click(); await sleep(300);
@@ -98,6 +100,78 @@
     const dt = new DataTransfer(); dt.items.add(new File([pb], "page.jpg", { type: "image/jpeg" })); $("#photo").files = dt.files;
     $("#photo").dispatchEvent(new Event("change"));
     ok("D1 page photo read by Muse", await until(() => S.book && S.book.via === "muse-vision", 60000) && /red hen/i.test(S.book.text), S.book.text.slice(0, 50));
+
+    // ---------- F. feedback loop: word fix, hint, appeal, story rating, redraw ----------
+    $("#newstory").click(); localStorage.setItem("rb_lang", "en"); S.lang = "en"; renderLangs();
+    const RUNF = RUN + "-f"; $("#learner").value = RUNF; await loadProfile();
+    while (S.profile.level < 3) { await post("/api/feedback", { kind: "story", learner: RUNF, data: { rating: "down", reasons: ["too_easy"] } }); await loadProfile(); }
+    ok("F0 'too easy' feedback raised the level to 3", S.profile.level === 3);
+    await loadBook("The Fox and the Grapes");
+    readAloud(S.book.text, [[1, "famish"]], 30);
+    let qF = (await S.qsPromise).questions;
+    const openQ = qF.find(q => q.format === "open");
+    plan = qF.flatMap(q => q.format === "choice" ? [`tap:${q.answer_index}`] : ["because the moon is purple", "because she likes cars"]);
+    $("#readbtn").click(); await sleep(150); stopReading();
+    readAloud(S.book.text, [[1, "famish"]], 30); $("#donebtn").click();
+    ok("F1 quiz opens at once with a loading card", await until(() => !$("#quiz").hidden && /Great reading|Wow|Nice|Good effort/.test($("#qcard").innerText), 4000));
+    await until(() => $("#qhint"), 30000); $("#qhint").click(); await sleep(20);
+    ok("F2 Hint shows where the answer is", /look here/i.test($("#qproof").innerText));
+    if (openQ) {
+      ok("F3 appeal offered after a final miss", await until(() => $("#qappeal"), 90000));
+      $("#qappeal")?.click();
+      ok("F4 appeal answered with a second opinion", await until(() => S.answers.some(a => a.kind === openQ.kind), 60000), JSON.stringify(S.answers));
+    } else ok("F3/F4 (no open question at this level)", true);
+    ok("F5 report card has feedback box", await until(() => $("#fbbox"), 90000));
+    const lvlBefore = S.profile.level;
+    document.querySelector('#fbbox .faces button[data-mood="happy"]').click();
+    document.querySelector('#fbbox .thumbs button[data-r="down"]').click(); await sleep(400);
+    document.querySelector('#fbreasons button[data-k="too_hard"]').click();
+    ok("F6 'too hard' lowers the level", await until(() => S.profile.level === Math.max(1, lvlBefore - 1), 8000), `${lvlBefore} → ${S.profile.level}`);
+    $("#closerep").click(); await sleep(300);
+    const mis = [...document.querySelectorAll("#passage .misread")].find(e => e.onclick);
+    if (mis) { mis.click(); await sleep(200); $("#wordok").click(); await sleep(1500); }
+    ok("F7 'I read it right' un-marks the word", mis && !mis.classList.contains("misread"));
+    showPage(0); $("#redraw").click(); await sleep(200);
+    document.querySelector('#pagepic .reasons button[data-r="looks_different"]').click(); await sleep(300);
+    ok("F8 redraw starts", S.pages[0].pending === true);
+    ok("F9 redrawn picture arrives", await until(() => !S.pages[0].pending && S.pages[0].gen, 60000));
+
+    // ---------- G. 'Quiz me' after only listening ----------
+    showBook(); await sleep(200);
+    plan = (await S.qsPromise).questions.flatMap(q => q.format === "choice" ? [q.choices[q.answer_index]] : [q.expected_answer]);
+    $("#quizme").click();
+    ok("G1 Quiz me opens questions without reading", await until(() => $("#qtext") || document.querySelector(".qtext"), 30000));
+    ok("G2 report shows listening, level unchanged", await until(() => $("#qcard")?.innerText.includes("listened"), 90000));
+    $("#closerep").click();
+
+    // ---------- H. parent dashboard with mock data ----------
+    await post("/api/parent/sample", {}); await openParent(0);
+    const tabs = [...document.querySelectorAll("#pcard .tabs button")].map(b => b.innerText);
+    ok("H1 sample kids listed", tabs.some(t => t.includes("Sample Mia")) && tabs.some(t => t.includes("Sample Leo")), tabs.join(" | "));
+    const mia = tabs.findIndex(t => t.includes("Sample Mia")); await openParent(mia);
+    ok("H2 daily chart drawn", document.querySelectorAll("#pcard svg rect").length >= 8);
+    ok("H3 daily table rows", document.querySelectorAll("#pcard .daytab tr").length >= 9, `${document.querySelectorAll("#pcard .daytab tr").length - 1} days`);
+    ok("H4 streak + minutes + mastered tiles", /day streak/.test($("#pcard").innerText) && /minutes read/.test($("#pcard").innerText));
+    const leo = tabs.findIndex(t => t.includes("Sample Leo")); await openParent(leo);
+    ok("H5 second language level shown", $("#pcard .levels").innerText.includes("Español"));
+    const pend = document.querySelectorAll("#pcard [data-id]").length / 2;
+    ok("H6 review queue has the feedback items", pend >= 1, `${pend} items`);
+    if (pend) { document.querySelector('#pcard [data-l="correct"]').click(); await sleep(800); }
+    ok("H7 confirming removes it from the queue", document.querySelectorAll("#pcard [data-id]").length / 2 === pend - 1);
+    $("#pclose").click();
+
+    // ---------- I. Chinese session with auto-finish ----------
+    $("#newstory").click(); document.querySelector('#langbar button[data-lang="zh"]').click(); await sleep(300);
+    await loadBook("狐狸和葡萄");
+    ok("I1 Chinese book per character", S.book.lang === "zh" && document.querySelectorAll("#passage span").length > 40);
+    const zq = (await S.qsPromise).questions; plan = zq.flatMap(q => q.format === "choice" ? [q.choices[q.answer_index]] : [q.expected_answer]);
+    $("#readbtn").click(); await sleep(150); stopReading();
+    readAloud(S.book.text.replace("跳了又跳", "跳了跳"), [], 30); reader.st.on = true;
+    markReached(S.book.text);                       // she reaches the last character -> auto-finish
+    ok("I2 auto-finish at the last word", await until(() => !$("#quiz").hidden, 8000));
+    ok("I3 report in characters per minute", await until(() => $("#qcard")?.innerText.includes("characters / minute"), 120000));
+    ok("I4 Chinese questions answered", S.answers.length === 3, S.answers.map(a => a.verdict).join(","));
+    $("#closerep").click(); document.querySelector('#langbar button[data-lang="en"]')?.click(); localStorage.setItem("rb_lang", "en"); S.lang = "en";
 
     // ---------- E. errors ----------
     $("#newstory").click(); said.length = 0;

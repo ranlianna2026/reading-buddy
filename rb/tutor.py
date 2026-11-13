@@ -35,33 +35,63 @@ Q_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["quest
             "quote": {"type": "string", "description": "exact words copied from the passage that support the answer"},
             "word": {"type": "string", "description": "for vocabulary questions, the word asked about; else empty"},
             "choices": {"type": "array", "items": {"type": "string"},
-                        "description": "recall and vocabulary: exactly 3 short options (one right, two plausible but clearly wrong); inference: empty"},
-            "answer_index": {"type": "integer", "description": "index of the right option in choices; -1 for inference"}}}}}}
+                        "description": "exactly 3 short options (one right, two clearly wrong) when the format is single choice; else empty"},
+            "answer_index": {"type": "integer", "description": "index of the right option in choices; -1 when open-ended"}}}}}}
 
 
-def make_questions(passage, practice_words=(), age="6-10", focus=None, lang="en"):
-    hint = f"Words the child stumbled on: {', '.join(practice_words)}. " if practice_words else ""
+# Question difficulty by reading level: format per question kind, max question length, max option length.
+DIFFICULTY = {
+    1: {"formats": {"recall": "choice", "inference": "choice", "vocabulary": "choice"}, "q_words": 8, "opt_words": 3,
+        "style": "very easy: ask only about things said directly in one sentence; the feeling question uses simple "
+                 "feeling options like 'happy', 'sad', 'scared'"},
+    2: {"formats": {"recall": "choice", "inference": "choice", "vocabulary": "choice"}, "q_words": 10, "opt_words": 4,
+        "style": "easy: literal recall; the why/feel question has 3 short options, one clearly right"},
+    3: {"formats": {"recall": "choice", "inference": "open", "vocabulary": "choice"}, "q_words": 12, "opt_words": 5,
+        "style": "gentle: the why/feel question is answered out loud in a few words"},
+    4: {"formats": {"recall": "open", "inference": "open", "vocabulary": "choice"}, "q_words": 14, "opt_words": 6,
+        "style": "moderate"},
+    5: {"formats": {"recall": "open", "inference": "open", "vocabulary": "choice"}, "q_words": 16, "opt_words": 6,
+        "style": "moderate, a little more thinking"},
+}
+
+
+def make_questions(passage, practice_words=(), age="6-10", focus=None, lang="en", level=2):
+    d = DIFFICULTY.get(level, DIFFICULTY[2])
+    unit = "characters" if L.is_cjk(lang) else "words"
+    qmax, omax = (d["q_words"] * 2, d["opt_words"] * 2) if L.is_cjk(lang) else (d["q_words"], d["opt_words"])
+    hint = ""
     if focus:
-        hint += (f"This child finds {focus} questions hard: make the {focus} question gentle and scaffolded, "
-                 "building on an easy detail first. ")
-    out = chat_json(sysmsg(age, lang),
-                    f"{hint}Write exactly 3 questions in {L.get(lang)['name']} about this passage: one 'recall' (what happened / who), "
-                    "as single choice with 3 short options; "
-                    "one 'inference' (why / how did a character feel), one 'vocabulary' (meaning of a word "
-                    "from the passage, preferably one the child stumbled on) as single choice with 3 short options; "
-                    "the inference question is open-ended (no options). Each needs an expected answer "
-                    "and a short exact quote from the passage that supports it.\n\nPassage:\n" + passage,
-                    Q_SCHEMA, "questions")
-    qs = [q for q in out["questions"] if quote_ok(q["quote"], passage, lang)] or out["questions"][:3]
-    return [_shape(q) for q in qs[:3]], out.get("learn_topic", "")
+        hint += f"This child finds {focus} questions hard: make that one extra gentle. "
+    fmt = "; ".join(f"{k}: {'single choice with 3 options' if v == 'choice' else 'open-ended (no options)'}" for k, v in d["formats"].items())
+    ask = (f"{hint}Write exactly 3 questions in {L.get(lang)['name']} about this passage for a beginning reader at "
+           f"reading level {level} of 5. Difficulty: {d['style']}.\n"
+           f"Kinds and formats: one 'recall' (who / what happened), one 'inference' (why / how did someone feel), one "
+           f"'vocabulary'. Formats -> {fmt}.\n"
+           f"Every question at most {qmax} {unit}, using only easy everyday words. Every option at most {omax} {unit}; "
+           "wrong options must be clearly wrong to a child who read the story (no trick options).\n"
+           "Vocabulary: pick a word whose meaning the story itself makes clear, and put that clue in the question, "
+           "e.g. 'The fox was famished, she wanted to eat! What does famished mean?' Options are very simple words.\n"
+           "Each question needs an expected answer and a short exact quote from the passage that shows the answer."
+           "\n\nPassage:\n" + passage)
+    feedback = ""
+    for _ in range(2):
+        out = chat_json(sysmsg(age, lang), ask + feedback, Q_SCHEMA, "questions")
+        qs = [_shape(q, d["formats"].get(q["kind"], "choice")) for q in
+              ([q for q in out["questions"] if quote_ok(q["quote"], passage, lang)] or out["questions"])[:3]]
+        too_long = [q["question"] for q in qs if L.length(q["question"], lang) > qmax + 2]
+        long_opts = [c for q in qs for c in q["choices"] if L.length(c, lang) > omax + 1]
+        if not too_long and not long_opts:
+            break
+        feedback = (f"\n\nToo hard: these are too long, make them shorter and simpler: {too_long + long_opts}")
+    return qs, out.get("learn_topic", "")
 
 
-def _shape(q):
+def _shape(q, want="choice"):
     """Code checks single-choice questions (3 distinct options, a valid right answer) and shuffles them;
-    anything malformed becomes an open-ended question graded by Muse instead."""
+    open questions (or malformed choice ones) are answered out loud and graded by Muse."""
     ch = [c.strip() for c in q.get("choices") or [] if c.strip()]
     ai = q.get("answer_index", -1)
-    if q["kind"] == "inference" or len(ch) != 3 or len({c.lower() for c in ch}) != 3 or not 0 <= ai < 3:
+    if want == "open" or len(ch) != 3 or len({c.lower() for c in ch}) != 3 or not 0 <= ai < 3:
         return {**q, "format": "open", "choices": [], "answer_index": -1}
     right = ch[ai]
     random.shuffle(ch)
@@ -96,6 +126,21 @@ def grade(passage, q, answer, age="6-10", attempt=1, lang="en"):
         out["next_action"] = "praise_move_on"
     elif attempt >= 2 and out["next_action"] in ("hint_retry", "reread_retry"):
         out["next_action"] = "explain_move_on"
+    return out
+
+
+def regrade(passage, q, answer, verdict_before, age="6-10", lang="en"):
+    """Second opinion when the child says "I think I was right!": re-read carefully and be fair."""
+    out = chat_json(sysmsg(age, lang) + " You are giving a careful second opinion on a grade the child disagrees with.",
+                    f"Passage:\n{passage}\n\nQuestion ({q['kind']}): {q['question']}\nExpected answer: {q['expected_answer']}\n"
+                    f"Child's answer (speech-to-text, may have small errors): \"{answer}\"\nFirst grade: {verdict_before}.\n"
+                    "The child thinks they were right. Re-read the passage. If the answer is supported by the passage in any "
+                    "reasonable reading (including a different but valid reason), mark it correct and say sorry warmly. If it "
+                    "is still not supported, explain kindly with the quote that shows the answer.",
+                    G_SCHEMA, "regrade")
+    if not quote_ok(out.get("quote", ""), passage, lang):
+        out["quote"] = q["quote"] if quote_ok(q["quote"], passage, lang) else ""
+    out["next_action"] = "praise_move_on" if out["verdict"] == "correct" else "explain_move_on"
     return out
 
 

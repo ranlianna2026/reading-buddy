@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from rb import books, learner, meta_api, scoring, story, tutor
+from rb import books, feedback, learner, meta_api, scoring, story, tutor
 
 app = FastAPI(title="Reading Buddy")
 STATIC = Path(__file__).parent / "static"
@@ -49,7 +49,7 @@ class AskReq(BaseModel):
 
 def _story_for(learner_name, idea, lang, kind):
     prof = learner.load(learner_name, lang)
-    st = story.create_story([], idea, prof["level"], prof["practice"][:3], lang, kind)
+    st = story.create_story([], idea, prof["level"], prof["practice"][:3], lang, kind, prof.get("prefs"))
     return {**st, "level_label": learner.LEVELS[prof["level"]]["label"]}
 
 
@@ -84,11 +84,13 @@ class ScoreReq(BaseModel):
     transcript: str
     seconds: float
     lang: str = "en"
+    learner: str = ""
 
 
 @app.post("/api/score")
 def score(req: ScoreReq):
-    return scoring.score(req.passage, req.transcript, req.seconds, req.lang)
+    acc = feedback.accepted(req.learner, req.lang) if req.learner else {}
+    return scoring.score(req.passage, req.transcript, req.seconds, req.lang, acc)
 
 
 class QReq(BaseModel):
@@ -101,8 +103,9 @@ class QReq(BaseModel):
 
 @app.post("/api/questions")
 def questions(req: QReq):
-    focus = learner.focus_skill(learner.load(req.learner, req.lang)) if req.learner else None
-    qs, topic = tutor.make_questions(req.passage, req.practice_words, req.age, focus, req.lang)
+    prof = learner.load(req.learner, req.lang) if req.learner else None
+    focus = learner.focus_skill(prof) if prof else None
+    qs, topic = tutor.make_questions(req.passage, req.practice_words, req.age, focus, req.lang, prof["level"] if prof else 2)
     return {"questions": qs, "learn_topic": topic}
 
 
@@ -143,7 +146,7 @@ async def make_story(idea: str = Form(""), learner_name: str = Form("Reader"), l
     prof = learner.load(learner_name, lang)
     t0 = time.time()
     kind = "topic" if not imgs and story.classify_request(idea, lang)[0] == "topic" else "idea"   # "teach me about..."
-    st = story.create_story(imgs, idea, prof["level"], prof["practice"][:3], lang, kind)
+    st = story.create_story(imgs, idea, prof["level"], prof["practice"][:3], lang, kind, prof.get("prefs"))
     return {**st, "seconds": round(time.time() - t0, 1), "level_label": learner.LEVELS[prof["level"]]["label"]}
 
 
@@ -172,30 +175,92 @@ def session(req: SessionReq):
     return {"profile": _profile_view(prof), "change": change}
 
 
-@app.get("/api/picture/{pid}")
-def early_picture(pid: str):
-    """A picture started early on the server (a story's first page); waits for it to finish."""
-    from rb import illustrate
-    try:
-        return {"image": illustrate.wait(pid)}
-    except KeyError:
-        raise HTTPException(404, "no such picture")
-    except Exception as e:
-        raise HTTPException(502, f"could not draw a picture: {str(e)[:200]}")
-
-
 class IllustrateReq(BaseModel):
     page_text: str
     ref_image: str = ""     # book illustration URL, child's drawing, or this story's first picture; "" = draw from scratch
     title: str = ""
     kind: str = "book"      # "book", "story" (child's drawing), "series" (earlier page of this story), "new"
     cast: str = ""          # characters and setting, for consistent pictures
+    variant: str = ""       # set on "redraw" to bypass the cache
+    avoid: str = ""         # what was wrong with the previous picture (feedback)
 
 
 @app.post("/api/illustrate")
 def make_picture(req: IllustrateReq):
     from rb import illustrate
     try:
-        return {"image": illustrate.illustrate(req.page_text, req.ref_image or None, req.title, req.kind, req.cast)}
+        return {"image": illustrate.illustrate(req.page_text, req.ref_image or None, req.title, req.kind, req.cast,
+                                               req.variant, req.avoid)}
     except Exception as e:  # a missing picture should never break reading
         raise HTTPException(502, f"could not draw a picture: {str(e)[:200]}")
+
+
+# ---------------- feedback loop ----------------
+class FeedbackReq(BaseModel):
+    kind: str
+    data: dict = {}
+    learner: str = "Reader"
+    lang: str = "en"
+    title: str = ""
+
+
+@app.post("/api/feedback")
+def give_feedback(req: FeedbackReq):
+    try:
+        ev = feedback.log(req.kind, req.data, req.learner, req.lang, req.title)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True, "id": ev["id"], "profile": _profile_view(learner.load(req.learner, req.lang))}
+
+
+class AppealReq(BaseModel):
+    passage: str
+    question: dict
+    answer: str
+    verdict_before: str
+    learner: str = "Reader"
+    lang: str = "en"
+    title: str = ""
+
+
+@app.post("/api/appeal")
+def appeal(req: AppealReq):
+    g = tutor.regrade(req.passage, req.question, req.answer, req.verdict_before, lang=req.lang)
+    feedback.log("appeal", {"question": req.question, "answer": req.answer, "passage": req.passage,
+                            "verdict_before": req.verdict_before, "verdict_after": g["verdict"]},
+                 req.learner, req.lang, req.title)
+    return g
+
+
+@app.get("/api/feedback/summary")
+def feedback_summary():
+    return feedback.summary()
+
+
+@app.get("/api/review")
+def review_queue():
+    return feedback.pending_review()
+
+
+class ReviewReq(BaseModel):
+    id_ref: str
+    label: str            # "correct" or "incorrect"
+
+
+@app.post("/api/review")
+def review(req: ReviewReq):
+    if req.label not in ("correct", "incorrect"):
+        raise HTTPException(400, "label must be correct or incorrect")
+    feedback.log("review", {"id_ref": req.id_ref, "label": req.label}, "parent")
+    return {"ok": True, "pending": len(feedback.pending_review())}
+
+
+@app.get("/api/parent")
+def parent_dashboard():
+    return {"children": learner.all_children(), "feedback": feedback.summary(), "review": feedback.pending_review()}
+
+
+@app.post("/api/parent/sample")
+def parent_sample():
+    learner.make_samples()
+    return parent_dashboard()

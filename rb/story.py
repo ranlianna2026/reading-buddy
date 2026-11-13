@@ -8,6 +8,7 @@
    failures fed back (same loop as a design fix: the model proposes, code verifies).
 """
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 from . import lang as L
 from .books import ksearch
@@ -79,26 +80,23 @@ def classify_request(text, lang="en"):
     return "title", _LEAD.sub("", t).strip() or t
 
 
-def cast_of(plan):
-    """Characters and setting, for consistent pictures (the page uses the same string for every other page)."""
-    return f"{plan.get('characters', '')}. Setting: {plan.get('setting', '')}"
-
-
 FACTS = {"en": "facts for kids", "es": "datos para niños", "fr": "pour les enfants", "zh": "儿童 知识", "ar": "معلومات للأطفال"}
 
 
-def create_story(images, idea, level, practice_words=(), lang="en", kind="idea"):
+def create_story(images, idea, level, practice_words=(), lang="en", kind="idea", prefs=None):
     spec = spec_for(level, lang)
     lname = L.get(lang)["name"] + (" — Simplified characters only" if lang == "zh" else "")
     said = ({"topic": f"A child asked to learn about: \"{idea}\".",
              "book": f"A child asked to read: \"{idea}\"."}.get(kind)
             or f"A child made these pictures and said this idea out loud: \"{idea or '(no idea given)'}\".")
     plan = chat_json(SYSTEM, f"{said} Plan a story from it. {KIND_NOTE[kind]} {ENGAGING}", PLAN, "plan", images=images)
-    cover_id = None
-    if not images:      # nothing to draw from: start page 1's picture now, while the story text is being written
-        from . import illustrate
-        cover_id = illustrate.start(f"The opening of the story: {plan.get('what_happens', idea)}",
-                                    title=idea[:80], cast=cast_of(plan))
+    # no drawing from the child: start the cover picture now, in parallel with writing the story (~15 s saved)
+    cover = None
+    if not images:
+        from .illustrate import illustrate
+        cast = f"{plan.get('characters', '')}. Setting: {plan.get('setting', '')}"
+        cover = ThreadPoolExecutor(max_workers=1).submit(
+            illustrate, f"The opening scene: {plan.get('what_happens') or idea}", None, idea or "a children's story", "new", cast)
     if kind == "topic" and not plan.get("search_query"):
         plan["real_world_topic"], plan["search_query"] = True, classify_request(idea, lang)[1]   # always real facts
     facts = []
@@ -116,6 +114,8 @@ def create_story(images, idea, level, practice_words=(), lang="en", kind="idea")
            + (" Use the child's pictures for the pages.\n" if images else "\n")
            + (f"Weave in each of these practice words naturally, at least once (any grammatical form is fine, e.g. "
               f"'whispered'; keep every sentence grammatical): {', '.join(practice_words)}.\n" if practice_words else "")
+           + (f"The child enjoyed stories about: {', '.join(prefs['liked'])}. " if prefs and prefs.get("liked") else "")
+           + (f"Avoid: {', '.join(prefs['avoid'])}. " if prefs and prefs.get("avoid") else "")
            + (f"Use 2-3 TRUE facts from these search results and list their indexes:\n{fact_txt}" if kind == "topic"
               else f"If they fit, include 1-2 TRUE facts from these search results and list their indexes:\n{fact_txt}"))
     feedback = ""
@@ -131,6 +131,12 @@ def create_story(images, idea, level, practice_words=(), lang="en", kind="idea")
                     + (f"its longest sentence had {check['longest_sentence']} {unit}, max is {spec['max_sentence']}. " if not check["sentence_ok"] else "")
                     + (f"it is missing these practice words: {', '.join(check['practice_missing'])}." if check["practice_missing"] else ""))
     used = [facts[i] for i in st.get("facts_used", []) if 0 <= i < len(facts)]
-    return {"title": st["title"], "text": text, "pages": st["pages"], "via": "story", "part": 0, "parts": 1,
-            "source": "story", "request": kind, "cover_id": cover_id, "level": level, "check": check, "attempts": attempt + 1, "plan": plan, "lang": lang,
+    cover_img = None
+    if cover:
+        try:
+            cover_img = cover.result(timeout=40)
+        except Exception:
+            cover_img = None              # the page can still draw it later
+    return {"cover": cover_img, "title": st["title"], "text": text, "pages": st["pages"], "via": "story", "part": 0, "parts": 1,
+            "source": "story", "request": kind, "level": level, "check": check, "attempts": attempt + 1, "plan": plan, "lang": lang,
             "facts": [{"title": f.title, "url": f.url} for f in used]}

@@ -8,8 +8,8 @@
   scratch instead, so every page still gets a picture.
 Pictures are resized to ~1024px wide JPEG before sending. $0.01 per image. Cached on disk by (reference, text, kind).
 """
-import base64, hashlib, os, time, uuid
-from concurrent.futures import ThreadPoolExecutor
+import base64, hashlib, io, os
+from functools import lru_cache
 from pathlib import Path
 
 import httpx
@@ -33,10 +33,9 @@ SHRINK_WIDTH = int(os.environ.get("RB_IMAGE_WIDTH", "1024"))
 
 
 def shrink(data, width=SHRINK_WIDTH, quality=82):
-    """Smaller JPEG for the page: much less to send to the browser, and to upload again when this picture is the
-    reference for the next pages. (The API's `size` only sets the aspect ratio, so it can't be asked for smaller.)"""
+    """Smaller JPEG for the page: much less to send to the browser. (The API's `size` only sets the aspect
+    ratio, so it can't be asked for a smaller picture.)"""
     try:
-        import io
         from PIL import Image
         im = Image.open(io.BytesIO(data)).convert("RGB")
         if im.width > width:
@@ -48,39 +47,35 @@ def shrink(data, width=SHRINK_WIDTH, quality=82):
         return data                                 # never lose a picture over resizing
 
 
-# pictures started early (e.g. a story's first picture, begun as soon as the story is planned, while the text is
-# still being written); the page picks the result up by id instead of waiting for a fresh drawing
-_POOL = ThreadPoolExecutor(max_workers=8)
-_EARLY = {}
+@lru_cache(maxsize=64)
+def small_ref(ref_image):
+    """Send a 512px JPEG copy of the reference (~75 KB instead of ~1.2 MB): edits run ~40% faster
+    (measured 13 s vs 23 s) with the same characters and style."""
+    from PIL import Image
+    try:
+        raw = (base64.b64decode(ref_image.split(",", 1)[1]) if ref_image.startswith("data:")
+               else httpx.get(ref_image, timeout=20, follow_redirects=True).content)
+        im = Image.open(io.BytesIO(raw)).convert("RGB")
+        im.thumbnail((512, 512))
+        buf = io.BytesIO()
+        im.save(buf, "JPEG", quality=82)
+        return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        return ref_image
 
 
-def start(page_text, ref_image=None, title="", kind="new", cast=""):
-    """Begin drawing in the background; returns an id for wait()."""
-    now = time.time()
-    for k in [k for k, (t, _) in _EARLY.items() if now - t > 600]:
-        _EARLY.pop(k, None)                         # forget pictures nobody collected
-    pid = uuid.uuid4().hex[:12]
-    _EARLY[pid] = (now, _POOL.submit(illustrate, page_text, ref_image, title, kind, cast))
-    return pid
-
-
-def wait(pid, timeout=90):
-    """The early picture's data URL. Raises KeyError for an unknown id, or the drawing's error."""
-    return _EARLY[pid][1].result(timeout=timeout)
-
-
-def illustrate(page_text, ref_image=None, title="", kind="book", cast=""):
+def illustrate(page_text, ref_image=None, title="", kind="book", cast="", variant="", avoid=""):
     """Returns a data URL (jpeg). Falls back to a from-scratch drawing when the reference can't be used."""
     if ref_image:
         try:
-            return _draw(page_text, ref_image, title, kind, cast)
+            return _draw(page_text, ref_image, title, kind, cast, variant, avoid)
         except Exception:
             pass                                    # bad or unreachable reference: draw it fresh below
-    return _draw(page_text, None, title, "new", cast)
+    return _draw(page_text, None, title, "new", cast, variant, avoid)
 
 
-def _draw(page_text, ref_image=None, title="", kind="book", cast=""):
-    key = hashlib.sha1(f"{(ref_image or '')[:4000]}|{page_text}|{kind}|{cast}".encode()).hexdigest()[:20]
+def _draw(page_text, ref_image=None, title="", kind="book", cast="", variant="", avoid=""):
+    key = hashlib.sha1(f"{(ref_image or '')[:4000]}|{page_text}|{kind}|{cast}|{variant}".encode()).hexdigest()[:20]
     path = CACHE / f"{key}.jpg"
     if path.exists():
         return "data:image/jpeg;base64," + base64.b64encode(path.read_bytes()).decode()
@@ -89,11 +84,12 @@ def _draw(page_text, ref_image=None, title="", kind="book", cast=""):
     prompt = (f"An illustration for one page of the children's story \"{title}\", in {STYLES.get(kind, STYLES['book'])}. "
               + (f"Characters and setting: {cast[:400]}. " if cast else "")
               + f"Show this moment: {page_text[:600]} "
-              "Gentle and friendly for young children. No words, letters or captions in the image.")
+              "Gentle and friendly for young children. No words, letters or captions in the image."
+              + (f" A child said the last picture for this page was wrong ({avoid}); fix that." if avoid else ""))
     body = {"model": MODEL, "prompt": prompt, "n": 1, "size": "1536x1024", "output_format": "jpeg", "reasoning_strength": "low"}
     endpoint = "/images/generations"
     if ref_image:
-        body["images"] = [{"image_url": ref_image}]
+        body["images"] = [{"image_url": small_ref(ref_image)}]
         endpoint = "/images/edits"
     r = httpx.post(meta_api.BASE_URL + endpoint, headers={"Authorization": f"Bearer {os.environ['MODEL_API_KEY']}"},
                    json=body, timeout=httpx.Timeout(55, connect=10))
