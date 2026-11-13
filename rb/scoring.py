@@ -29,7 +29,7 @@ def _close(a, b):
 SIGHT = set("""a an and are as at be but by can did do for from had has have he her him his how i if in into is it its
 just like me my no not of on or our out said she so than that the their them then there they this to too up us was we
 were what when where which who will with you your one two all any some very would could should about after again
-over under down off went came come here been them""".split())
+over under down off went came come here been them three four five six seven eight nine ten""".split())
 
 
 def score(passage, transcript, seconds):
